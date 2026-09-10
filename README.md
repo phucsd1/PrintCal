@@ -7,7 +7,7 @@ sdk: docker
 app_port: 3000
 pinned: false
 license: mit
-short_description: Công cụ tính giá in Offset & In Nhanh thông minh, quản lý đơn hàng
+short_description: Smart Offset & Digital Print Pricing Calculator
 ---
 
 # 🖨️ PrintCal - Công Cụ Tính Giá In Offset & In Nhanh Thông Minh
