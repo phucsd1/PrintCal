@@ -26,16 +26,16 @@ import {
 } from '@/types';
 import {
   Calculator,
-  Layers,
   Sparkles,
   Zap,
   Scissors,
   Check,
-  ChevronRight,
+  ChevronDown,
+  ChevronUp,
   RefreshCw,
-  Sliders,
-  DollarSign,
-  FileSpreadsheet,
+  LayoutGrid,
+  TrendingUp,
+  FileText,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -50,7 +50,7 @@ export default function HomePage() {
   const [orderCount, setOrderCount] = useState(0);
 
   // Form Inputs
-  const [jobName, setJobName] = useState('In Tờ Rơi A4 Quảng Cáo');
+  const [jobName, setJobName] = useState('In Tờ Rơi A4');
   const [productType, setProductType] = useState<ProductType>('to_roi');
   const [printTech, setPrintTech] = useState<PrintTech>('auto');
   const [quantity, setQuantity] = useState(1000);
@@ -63,24 +63,29 @@ export default function HomePage() {
   const [colorsBack, setColorsBack] = useState(4);
   const [offsetWorkType, setOffsetWorkType] = useState<OffsetWorkType>('self_turn');
   const [selectedFinishing, setSelectedFinishing] = useState<{ serviceId: number; sides?: number }[]>([
-    { serviceId: 1, sides: 2 }, // Cán màng mờ 2 mặt mặc định
+    { serviceId: 1, sides: 2 },
   ]);
   const [profitMarginPercent, setProfitMarginPercent] = useState(25);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [vatPercent, setVatPercent] = useState(8);
 
-  // Customer Info for Order / Quote
-  const [customerName, setCustomerName] = useState('Công ty Khách Hàng');
-  const [customerPhone, setCustomerPhone] = useState('0912345678');
+  // Accordion tùy chọn nâng cao (ẩn mặc định cho thoáng)
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Calculation Result
+  // Chế độ xem ở cột kết quả (2D Imposition vs Break-even vs Breakdown)
+  const [resultTab, setResultTab] = useState<'visual' | 'breakeven' | 'breakdown'>('visual');
+
+  // Customer Info
+  const [customerName, setCustomerName] = useState('Khách Hàng');
+  const [customerPhone, setCustomerPhone] = useState('');
+
+  // Result
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [calculating, setCalculating] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [currentQuoteCode, setCurrentQuoteCode] = useState(`BG-${Date.now().toString().slice(-6)}`);
 
-  // Tải dữ liệu ban đầu
   const loadMasterData = async () => {
     try {
       const [pRes, mRes, fRes, sRes, oRes] = await Promise.all([
@@ -94,7 +99,6 @@ export default function HomePage() {
       if (Array.isArray(pRes)) {
         setPapers(pRes);
         if (pRes.length > 0 && paperTypeId === 0) {
-          // Mặc định chọn Couche 150gsm
           const defaultPaper = pRes.find((p) => p.code.includes('C150')) || pRes[0];
           setPaperTypeId(defaultPaper.id);
         }
@@ -110,7 +114,7 @@ export default function HomePage() {
       }
       if (Array.isArray(oRes)) setOrderCount(oRes.length);
     } catch (err) {
-      console.error('Failed to load initial data:', err);
+      console.error('Failed to load master data:', err);
     }
   };
 
@@ -118,7 +122,6 @@ export default function HomePage() {
     loadMasterData();
   }, []);
 
-  // Tính toán chi phí mỗi khi tham số thay đổi
   const triggerCalculation = useCallback(async () => {
     if (!paperTypeId || paperTypeId === 0) return;
 
@@ -183,11 +186,10 @@ export default function HomePage() {
     }
   }, [triggerCalculation, paperTypeId]);
 
-  // Áp dụng Preset mẫu ấn phẩm phổ biến
   const applyPreset = (type: string) => {
     switch (type) {
       case 'a4_flyer':
-        setJobName('Tờ Rơi A4 Quảng Cáo');
+        setJobName('Tờ Rơi A4');
         setProductType('to_roi');
         setWidthMm(210);
         setHeightMm(297);
@@ -199,7 +201,7 @@ export default function HomePage() {
         break;
 
       case 'a5_flyer':
-        setJobName('Tờ Rơi A5 Sự Kiện');
+        setJobName('Tờ Rơi A5');
         setProductType('to_roi');
         setWidthMm(148);
         setHeightMm(210);
@@ -211,7 +213,7 @@ export default function HomePage() {
         break;
 
       case 'namecard':
-        setJobName('Danh Thiếp / Namecard 2 Mặt');
+        setJobName('Danh Thiếp 2 Mặt');
         setProductType('namecard');
         setWidthMm(90);
         setHeightMm(54);
@@ -223,11 +225,28 @@ export default function HomePage() {
         if (lamination) setSelectedFinishing([{ serviceId: lamination.id, sides: 2 }]);
         break;
 
-      case 'cosmetic_box':
-        setJobName('Hộp Mỹ Phẩm Cao Cấp');
+      case 'brochure':
+        setJobName('Brochure Gấp 3');
+        setProductType('to_roi');
+        setWidthMm(297);
+        setHeightMm(210);
+        setQuantity(1000);
+        setPrintSides('2_side');
+        const c200 = papers.find((p) => p.code.includes('C200'));
+        if (c200) setPaperTypeId(c200.id);
+        const crease = finishingServices.find((f) => f.code.includes('CAN_GAP_2_DUONG'));
+        const mờ = finishingServices.find((f) => f.category === 'can_mang');
+        const broFin = [];
+        if (mờ) broFin.push({ serviceId: mờ.id, sides: 2 });
+        if (crease) broFin.push({ serviceId: crease.id });
+        setSelectedFinishing(broFin);
+        break;
+
+      case 'box':
+        setJobName('Hộp Giấy Mỹ Phẩm');
         setProductType('hop_giay');
         setWidthMm(240);
-        setHeightMm(320); // Khổ trải mở phẳng hộp
+        setHeightMm(320);
         setQuantity(1000);
         setPrintSides('1_side');
         const ivory = papers.find((p) => p.code.includes('I350') || p.code.includes('I300'));
@@ -242,25 +261,8 @@ export default function HomePage() {
         setSelectedFinishing(boxFinishing);
         break;
 
-      case 'paper_bag':
-        setJobName('Túi Giấy Kraft Shop');
-        setProductType('tui_giay');
-        setWidthMm(420);
-        setHeightMm(310);
-        setQuantity(1000);
-        setPrintSides('1_side');
-        const kraft = papers.find((p) => p.code.includes('K250') || p.code.includes('K170'));
-        if (kraft) setPaperTypeId(kraft.id);
-        const bagDie = finishingServices.find((f) => f.calcType === 'die_cut');
-        const bagGlue = finishingServices.find((f) => f.code.includes('DAN_DAY_TUI'));
-        const bagFinishing = [];
-        if (bagDie) bagFinishing.push({ serviceId: bagDie.id });
-        if (bagGlue) bagFinishing.push({ serviceId: bagGlue.id });
-        setSelectedFinishing(bagFinishing);
-        break;
-
       case 'sticker':
-        setJobName('Decal Tem Nhãn Tròn Dán Ly');
+        setJobName('Decal Tem Nhãn');
         setProductType('decal');
         setWidthMm(50);
         setHeightMm(50);
@@ -271,27 +273,9 @@ export default function HomePage() {
         const demi = finishingServices.find((f) => f.code.includes('BE_DEMI'));
         if (demi) setSelectedFinishing([{ serviceId: demi.id }]);
         break;
-
-      case 'brochure':
-        setJobName('Brochure Gấp 3 Giới Thiệu');
-        setProductType('to_roi');
-        setWidthMm(297);
-        setHeightMm(210);
-        setQuantity(1500);
-        setPrintSides('2_side');
-        const c200 = papers.find((p) => p.code.includes('C200'));
-        if (c200) setPaperTypeId(c200.id);
-        const crease = finishingServices.find((f) => f.code.includes('CAN_GAP_2_DUONG'));
-        const mờ = finishingServices.find((f) => f.category === 'can_mang');
-        const broFin = [];
-        if (mờ) broFin.push({ serviceId: mờ.id, sides: 2 });
-        if (crease) broFin.push({ serviceId: crease.id });
-        setSelectedFinishing(broFin);
-        break;
     }
   };
 
-  // Toggle dịch vụ gia công
   const toggleFinishing = (serviceId: number) => {
     setSelectedFinishing((prev) => {
       const exists = prev.find((f) => f.serviceId === serviceId);
@@ -303,13 +287,6 @@ export default function HomePage() {
     });
   };
 
-  const updateFinishingSides = (serviceId: number, sides: number) => {
-    setSelectedFinishing((prev) =>
-      prev.map((f) => (f.serviceId === serviceId ? { ...f, sides } : f))
-    );
-  };
-
-  // Lưu đơn hàng vào CSDL
   const handleSaveOrder = async () => {
     if (!result) return;
     try {
@@ -344,7 +321,6 @@ export default function HomePage() {
         finalPrice: result.costs.finalPrice,
         unitPrice: result.costs.unitPrice,
         status: 'quote',
-        notes: `Tận dụng giấy: ${result.imposition.sheetEfficiencyPercent}%. Số tờ bù hao: ${result.quantities.printWasteSheets + result.quantities.finishingWasteSheets}`,
       };
 
       const res = await fetch('/api/orders', {
@@ -371,144 +347,72 @@ export default function HomePage() {
   }, [papers, paperTypeId]);
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
-      {/* Navbar điều hướng */}
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} orderCount={orderCount} />
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
         {/* PHÂN HỆ 1: MÁY TÍNH GIÁ THÔNG MINH */}
         {activeTab === 'calculator' && (
-          <div className="space-y-5">
-            {/* Thanh Presets Mẫu Ấn Phẩm */}
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider shrink-0 flex items-center gap-1.5 pl-1">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Mẫu Nhanh:
+          <div className="space-y-4">
+            {/* Quick Presets Bar */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+              <span className="text-slate-400 font-semibold px-1 text-[11px] uppercase tracking-wider shrink-0">
+                Mẫu nhanh:
               </span>
-              <div className="flex items-center gap-2 text-xs">
+              {[
+                { id: 'a4_flyer', label: 'Tờ Rơi A4' },
+                { id: 'a5_flyer', label: 'Tờ Rơi A5' },
+                { id: 'namecard', label: 'Danh Thiếp' },
+                { id: 'brochure', label: 'Brochure Gấp 3' },
+                { id: 'box', label: 'Hộp Mỹ Phẩm' },
+                { id: 'sticker', label: 'Decal Tem Nhãn' },
+              ].map((preset) => (
                 <button
-                  onClick={() => applyPreset('a4_flyer')}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50/60 font-medium text-slate-700 transition-colors whitespace-nowrap"
+                  key={preset.id}
+                  onClick={() => applyPreset(preset.id)}
+                  className="px-3 py-1.5 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-full font-medium text-slate-700 transition-colors whitespace-nowrap shadow-2xs"
                 >
-                  📄 Tờ Rơi A4
+                  {preset.label}
                 </button>
-                <button
-                  onClick={() => applyPreset('a5_flyer')}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50/60 font-medium text-slate-700 transition-colors whitespace-nowrap"
-                >
-                  📄 Tờ Rơi A5
-                </button>
-                <button
-                  onClick={() => applyPreset('namecard')}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50/60 font-medium text-slate-700 transition-colors whitespace-nowrap"
-                >
-                  💳 Namecard
-                </button>
-                <button
-                  onClick={() => applyPreset('brochure')}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50/60 font-medium text-slate-700 transition-colors whitespace-nowrap"
-                >
-                  📖 Brochure Gấp 3
-                </button>
-                <button
-                  onClick={() => applyPreset('cosmetic_box')}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50/60 font-medium text-slate-700 transition-colors whitespace-nowrap"
-                >
-                  📦 Hộp Mỹ Phẩm
-                </button>
-                <button
-                  onClick={() => applyPreset('paper_bag')}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50/60 font-medium text-slate-700 transition-colors whitespace-nowrap"
-                >
-                  🛍️ Túi Giấy Kraft
-                </button>
-                <button
-                  onClick={() => applyPreset('sticker')}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50/60 font-medium text-slate-700 transition-colors whitespace-nowrap"
-                >
-                  🏷️ Decal Tem Nhãn
-                </button>
-              </div>
+              ))}
             </div>
 
-            {/* Khung Tính Giá 3 Cột: Form Nhập -> Kết Quả Trực Quan 2D & Chart -> Tóm Tắt Giá Bán */}
+            {/* Bố cục 2 cột cân đối: Form Cấu Hình (Trái) & Bảng Kết Quả Live (Phải) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              {/* CỘT 1: FORM THÔNG SỐ SẢN PHẨM & CẤU HÌNH (4 CỘT) */}
-              <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
-                      <Calculator className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h2 className="font-bold text-slate-900 text-sm md:text-base">Thông Số Ấn Phẩm</h2>
-                      <p className="text-[11px] text-slate-500">Nhập quy cách sản phẩm để tính toán tức thì</p>
-                    </div>
+              {/* CỘT TRÁI: FORM CẤU HÌNH (7 CỘT) */}
+              <div className="lg:col-span-7 space-y-4">
+                {/* Khối 1: Quy cách sản phẩm */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-5 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <h2 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-600" />
+                      Quy Cách Sản Phẩm
+                    </h2>
+                    <span className="text-xs text-slate-400 font-medium">Bấm đổi thông số để tính lại</span>
                   </div>
 
-                  <button
-                    onClick={triggerCalculation}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100"
-                    title="Tính lại"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${calculating ? 'animate-spin text-blue-600' : ''}`} />
-                  </button>
-                </div>
-
-                {/* Tên bài in & Phân loại */}
-                <div className="space-y-3 text-xs">
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Tên Ấn Phẩm / Bài In</label>
-                    <input
-                      type="text"
-                      value={jobName}
-                      onChange={(e) => setJobName(e.target.value)}
-                      className="w-full border border-slate-300 rounded-lg p-2 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-3.5 text-xs">
+                    {/* Tên bài in */}
                     <div>
-                      <label className="block text-slate-700 font-semibold mb-1">Phân Loại Ấn Phẩm</label>
-                      <select
-                        value={productType}
-                        onChange={(e) => setProductType(e.target.value as ProductType)}
-                        className="w-full border border-slate-300 rounded-lg p-2 bg-white"
-                      >
-                        <option value="to_roi">Tờ Rơi / Flyer</option>
-                        <option value="namecard">Danh Thiếp / Card</option>
-                        <option value="hop_giay">Hộp Giấy Bao Bì</option>
-                        <option value="tui_giay">Túi Giấy Xách</option>
-                        <option value="decal">Decal / Tem Nhãn</option>
-                        <option value="catalogue">Catalogue / Sách</option>
-                        <option value="khac">Khác</option>
-                      </select>
+                      <label className="block text-slate-600 font-medium mb-1">Tên bài in</label>
+                      <input
+                        type="text"
+                        value={jobName}
+                        onChange={(e) => setJobName(e.target.value)}
+                        className="w-full border border-slate-300 rounded-lg p-2.5 font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="VD: Tờ rơi quảng cáo..."
+                      />
                     </div>
 
-                    <div>
-                      <label className="block text-slate-700 font-semibold mb-1">Công Nghệ In Đề Xuất</label>
-                      <select
-                        value={printTech}
-                        onChange={(e) => setPrintTech(e.target.value as PrintTech)}
-                        className="w-full border border-slate-300 rounded-lg p-2 bg-white font-semibold text-blue-700"
-                      >
-                        <option value="auto">✨ Tự Động So Sánh & Chọn Rẻ Nhất</option>
-                        <option value="offset">In Offset Công Nghiệp</option>
-                        <option value="digital">In Nhanh Kỹ Thuật Số (Click)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Kích thước & Số lượng */}
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2.5">
-                    <div className="grid grid-cols-3 gap-2">
+                    {/* Kích thước & Số lượng */}
+                    <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block text-slate-600 font-medium mb-1">Rộng (mm)</label>
                         <input
                           type="number"
                           value={widthMm}
                           onChange={(e) => setWidthMm(Number(e.target.value))}
-                          className="w-full border border-slate-300 rounded-lg p-2 font-bold text-slate-800"
+                          className="w-full border border-slate-300 rounded-lg p-2 font-bold text-slate-900 text-sm"
                         />
                       </div>
                       <div>
@@ -517,271 +421,316 @@ export default function HomePage() {
                           type="number"
                           value={heightMm}
                           onChange={(e) => setHeightMm(Number(e.target.value))}
-                          className="w-full border border-slate-300 rounded-lg p-2 font-bold text-slate-800"
+                          className="w-full border border-slate-300 rounded-lg p-2 font-bold text-slate-900 text-sm"
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-600 font-medium mb-1">Tràn Lề (mm)</label>
+                        <label className="block text-slate-600 font-medium mb-1">Số lượng (chiếc)</label>
                         <input
                           type="number"
-                          value={bleedMm}
-                          onChange={(e) => setBleedMm(Number(e.target.value))}
-                          className="w-full border border-slate-300 rounded-lg p-2 text-slate-700"
+                          step="50"
+                          value={quantity}
+                          onChange={(e) => setQuantity(Number(e.target.value))}
+                          className="w-full border border-blue-400 bg-blue-50/40 rounded-lg p-2 font-black text-blue-900 text-sm"
                         />
                       </div>
                     </div>
 
+                    {/* Loại giấy */}
                     <div>
-                      <label className="block text-slate-700 font-semibold mb-1 flex items-center justify-between">
-                        <span>Số Lượng Thành Phẩm:</span>
-                        <strong className="text-blue-700 text-sm">{quantity.toLocaleString('vi-VN')} chiếc</strong>
-                      </label>
-                      <input
-                        type="number"
-                        step="50"
-                        value={quantity}
-                        onChange={(e) => setQuantity(Number(e.target.value))}
-                        className="w-full border border-slate-300 rounded-lg p-2 font-black text-slate-900 text-base"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Loại giấy in */}
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Chất Liệu Giấy In</label>
-                    <select
-                      value={paperTypeId}
-                      onChange={(e) => setPaperTypeId(Number(e.target.value))}
-                      className="w-full border border-slate-300 rounded-lg p-2.5 bg-white font-medium text-slate-900"
-                    >
-                      {papers.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} ({p.parentWidthCm}x{p.parentHeightCm}cm) - {p.pricePerRam > 0 ? `${p.pricePerRam.toLocaleString('vi-VN')}đ/ram` : `${p.pricePerKg.toLocaleString('vi-VN')}đ/kg`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Mặt in & Kiểu trở kẽm Offset */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-700 font-semibold mb-1">Số Mặt In</label>
+                      <label className="block text-slate-600 font-medium mb-1">Chất liệu giấy in</label>
                       <select
-                        value={printSides}
-                        onChange={(e) => setPrintSides(e.target.value as '1_side' | '2_side')}
-                        className="w-full border border-slate-300 rounded-lg p-2 bg-white font-medium"
+                        value={paperTypeId}
+                        onChange={(e) => setPaperTypeId(Number(e.target.value))}
+                        className="w-full border border-slate-300 rounded-lg p-2.5 bg-white font-medium text-slate-800 text-xs"
                       >
-                        <option value="1_side">In 1 Mặt</option>
-                        <option value="2_side">In 2 Mặt</option>
+                        {papers.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.parentWidthCm}×{p.parentHeightCm}cm) — {p.pricePerRam > 0 ? `${p.pricePerRam.toLocaleString('vi-VN')}đ/ram` : `${p.pricePerKg.toLocaleString('vi-VN')}đ/kg`}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
-                    {printSides === '2_side' ? (
+                    {/* Số mặt in & Công nghệ in */}
+                    <div className="grid grid-cols-2 gap-3 pt-1">
                       <div>
-                        <label className="block text-slate-700 font-semibold mb-1">Kiểu Trở Kẽm (Offset)</label>
-                        <select
-                          value={offsetWorkType}
-                          onChange={(e) => setOffsetWorkType(e.target.value as OffsetWorkType)}
-                          className="w-full border border-slate-300 rounded-lg p-2 bg-white"
-                        >
-                          <option value="self_turn">Tự Trở (1 bộ kẽm)</option>
-                          <option value="sheetwise">In 2 Bài (2 bộ kẽm riêng)</option>
-                          <option value="tumble">Trở Nhíp</option>
-                        </select>
-                      </div>
-                    ) : (
-                      <div>
-                        <label className="block text-slate-700 font-semibold mb-1">Số Màu CMYK</label>
-                        <select
-                          value={colorsFront}
-                          onChange={(e) => setColorsFront(Number(e.target.value))}
-                          className="w-full border border-slate-300 rounded-lg p-2 bg-white"
-                        >
-                          <option value={4}>4 Màu Chuẩn (CMYK)</option>
-                          <option value={1}>1 Màu (Đen/Pha)</option>
-                        </select>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Danh mục gia công sau in */}
-                  <div className="space-y-2 pt-2 border-t border-slate-200">
-                    <label className="block text-slate-800 font-bold flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <Scissors className="w-3.5 h-3.5 text-blue-600" /> Gia Công Sau In:
-                      </span>
-                      <span className="text-[11px] font-normal text-slate-500">
-                        ({selectedFinishing.length} khâu đã chọn)
-                      </span>
-                    </label>
-
-                    <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 no-scrollbar">
-                      {finishingServices.map((service) => {
-                        const selected = selectedFinishing.find((f) => f.serviceId === service.id);
-                        return (
-                          <div
-                            key={service.id}
-                            onClick={() => toggleFinishing(service.id)}
-                            className={`p-2 rounded-lg border text-xs cursor-pointer flex items-center justify-between transition-all ${
-                              selected
-                                ? 'bg-blue-50/80 border-blue-400 text-blue-900 font-semibold'
-                                : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
+                        <label className="block text-slate-600 font-medium mb-1.5">Số mặt in</label>
+                        <div className="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-lg">
+                          <button
+                            type="button"
+                            onClick={() => setPrintSides('1_side')}
+                            className={`py-1.5 text-xs font-semibold rounded-md transition-all ${
+                              printSides === '1_side' ? 'bg-white shadow text-blue-700' : 'text-slate-600 hover:text-slate-900'
                             }`}
                           >
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-4 h-4 rounded flex items-center justify-center border ${
-                                  selected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'
-                                }`}
-                              >
-                                {selected && <Check className="w-3 h-3" />}
-                              </div>
-                              <span>{service.name}</span>
-                            </div>
+                            In 1 Mặt
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPrintSides('2_side')}
+                            className={`py-1.5 text-xs font-semibold rounded-md transition-all ${
+                              printSides === '2_side' ? 'bg-white shadow text-blue-700' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            In 2 Mặt
+                          </button>
+                        </div>
+                      </div>
 
-                            <div className="flex items-center gap-2">
-                              <span className="text-slate-500 text-[11px]">
-                                {service.unitPrice.toLocaleString('vi-VN')}đ
-                              </span>
-
-                              {/* Tùy chọn 1 mặt / 2 mặt nếu là cán màng */}
-                              {selected && service.category === 'can_mang' && (
-                                <div
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center gap-1 bg-white border border-blue-200 rounded px-1.5 py-0.5"
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => updateFinishingSides(service.id, 1)}
-                                    className={`px-1 rounded text-[10px] ${selected.sides === 1 ? 'bg-blue-600 text-white font-bold' : 'text-slate-600'}`}
-                                  >
-                                    1 mặt
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => updateFinishingSides(service.id, 2)}
-                                    className={`px-1 rounded text-[10px] ${selected.sides === 2 ? 'bg-blue-600 text-white font-bold' : 'text-slate-600'}`}
-                                  >
-                                    2 mặt
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Lợi nhuận & Chiết khấu & Thuế */}
-                  <div className="pt-2 border-t border-slate-200 grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-slate-600 font-medium mb-1">Lợi Nhuận (%)</label>
-                      <input
-                        type="number"
-                        value={profitMarginPercent}
-                        onChange={(e) => setProfitMarginPercent(Number(e.target.value))}
-                        className="w-full border border-slate-300 rounded-lg p-1.5 text-center font-bold text-emerald-700"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-600 font-medium mb-1">Giảm Giá (đ)</label>
-                      <input
-                        type="number"
-                        value={discountAmount}
-                        onChange={(e) => setDiscountAmount(Number(e.target.value))}
-                        className="w-full border border-slate-300 rounded-lg p-1.5 text-center text-rose-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-600 font-medium mb-1">VAT (%)</label>
-                      <input
-                        type="number"
-                        value={vatPercent}
-                        onChange={(e) => setVatPercent(Number(e.target.value))}
-                        className="w-full border border-slate-300 rounded-lg p-1.5 text-center"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Thông tin khách hàng nhanh */}
-                  <div className="pt-2 border-t border-slate-200 grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-slate-600 font-medium mb-1">Tên Khách Hàng</label>
-                      <input
-                        type="text"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        placeholder="Anh/Chị..."
-                        className="w-full border border-slate-300 rounded-lg p-1.5"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-600 font-medium mb-1">Số Điện Thoại</label>
-                      <input
-                        type="tel"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        placeholder="090..."
-                        className="w-full border border-slate-300 rounded-lg p-1.5"
-                      />
+                      <div>
+                        <label className="block text-slate-600 font-medium mb-1.5">Công nghệ in</label>
+                        <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-lg">
+                          <button
+                            type="button"
+                            onClick={() => setPrintTech('auto')}
+                            className={`py-1.5 text-[11px] font-semibold rounded-md transition-all ${
+                              printTech === 'auto' ? 'bg-white shadow text-blue-700' : 'text-slate-600'
+                            }`}
+                          >
+                            ⚡ Tự Động
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPrintTech('offset')}
+                            className={`py-1.5 text-[11px] font-semibold rounded-md transition-all ${
+                              printTech === 'offset' ? 'bg-white shadow text-indigo-700' : 'text-slate-600'
+                            }`}
+                          >
+                            Offset
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPrintTech('digital')}
+                            className={`py-1.5 text-[11px] font-semibold rounded-md transition-all ${
+                              printTech === 'digital' ? 'bg-white shadow text-sky-700' : 'text-slate-600'
+                            }`}
+                          >
+                            In Nhanh
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Khối 2: Gia công sau in dạng Quick Chips */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-5 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <h2 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <Scissors className="w-4 h-4 text-purple-600" />
+                      Gia Công Sau In
+                    </h2>
+                    <span className="text-xs text-slate-400">
+                      {selectedFinishing.length} dịch vụ đã chọn
+                    </span>
+                  </div>
+
+                  {/* Chips bấm chọn nhanh gọn */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {finishingServices.map((service) => {
+                      const isSelected = selectedFinishing.some((f) => f.serviceId === service.id);
+                      return (
+                        <button
+                          key={service.id}
+                          type="button"
+                          onClick={() => toggleFinishing(service.id)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                            isSelected
+                              ? 'bg-purple-50 border-purple-400 text-purple-900 font-semibold shadow-2xs'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
+                          }`}
+                        >
+                          <span
+                            className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] ${
+                              isSelected ? 'bg-purple-600 text-white' : 'border border-slate-300 bg-white'
+                            }`}
+                          >
+                            {isSelected && <Check className="w-2.5 h-2.5" />}
+                          </span>
+                          <span>{service.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Khối 3: Tùy chọn nâng cao (Thu gọn để tránh rối mắt) */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="w-full p-4 flex items-center justify-between text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    <span>⚙️ Tùy Chọn Nâng Cao (Lợi Nhuận, Thuế, Bleed, Khách Hàng)</span>
+                    {showAdvanced ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                  </button>
+
+                  {showAdvanced && (
+                    <div className="p-4 pt-0 border-t border-slate-100 space-y-3 text-xs">
+                      <div className="grid grid-cols-3 gap-3 pt-3">
+                        <div>
+                          <label className="block text-slate-600 font-medium mb-1">Lợi nhuận (%)</label>
+                          <input
+                            type="number"
+                            value={profitMarginPercent}
+                            onChange={(e) => setProfitMarginPercent(Number(e.target.value))}
+                            className="w-full border border-slate-300 rounded-lg p-2 text-center font-bold text-emerald-700"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-600 font-medium mb-1">Giảm giá (đ)</label>
+                          <input
+                            type="number"
+                            value={discountAmount}
+                            onChange={(e) => setDiscountAmount(Number(e.target.value))}
+                            className="w-full border border-slate-300 rounded-lg p-2 text-center text-rose-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-600 font-medium mb-1">VAT (%)</label>
+                          <input
+                            type="number"
+                            value={vatPercent}
+                            onChange={(e) => setVatPercent(Number(e.target.value))}
+                            className="w-full border border-slate-300 rounded-lg p-2 text-center"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 pt-1">
+                        <div>
+                          <label className="block text-slate-600 font-medium mb-1">Tràn lề Bleed (mm)</label>
+                          <input
+                            type="number"
+                            value={bleedMm}
+                            onChange={(e) => setBleedMm(Number(e.target.value))}
+                            className="w-full border border-slate-300 rounded-lg p-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-600 font-medium mb-1">Kiểu trở kẽm Offset</label>
+                          <select
+                            value={offsetWorkType}
+                            onChange={(e) => setOffsetWorkType(e.target.value as OffsetWorkType)}
+                            className="w-full border border-slate-300 rounded-lg p-2 bg-white"
+                          >
+                            <option value="self_turn">Tự Trở (1 bộ kẽm)</option>
+                            <option value="sheetwise">In 2 Bài (2 bộ kẽm riêng)</option>
+                            <option value="tumble">Trở Nhíp</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 pt-1">
+                        <div>
+                          <label className="block text-slate-600 font-medium mb-1">Tên khách hàng</label>
+                          <input
+                            type="text"
+                            value={customerName}
+                            onChange={(e) => setCustomerName(e.target.value)}
+                            className="w-full border border-slate-300 rounded-lg p-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-600 font-medium mb-1">Số điện thoại</label>
+                          <input
+                            type="tel"
+                            value={customerPhone}
+                            onChange={(e) => setCustomerPhone(e.target.value)}
+                            className="w-full border border-slate-300 rounded-lg p-2"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* CỘT 2: TRỰC QUAN HÓA 2D & SO SÁNH HÒA VỐN (4 CỘT) */}
-              <div className="lg:col-span-4 space-y-4">
-                {result && (
+              {/* CỘT PHẢI: KẾT QUẢ BÁO GIÁ & TRỰC QUAN HÓA TABBED (5 CỘT) */}
+              <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-20">
+                {result && selectedPaper ? (
                   <>
-                    {/* Bản vẽ 2D Mô phỏng cắt khổ giấy */}
-                    <ImpositionVisualizer
-                      imposition={result.imposition}
-                      productName={jobName}
-                      productWidthMm={widthMm}
-                      productHeightMm={heightMm}
+                    {/* Thẻ Hero Tổng Báo Giá & Nút Lưu/In */}
+                    <CostBreakdownCard
+                      input={{
+                        jobName,
+                        productType,
+                        printTech,
+                        quantity,
+                        widthMm,
+                        heightMm,
+                        bleedMm,
+                        paperTypeId,
+                        printSides,
+                        colorsFront,
+                        colorsBack,
+                        offsetWorkType,
+                        selectedFinishing,
+                        profitMarginPercent,
+                        discountAmount,
+                        vatPercent,
+                      }}
+                      result={result}
+                      paperType={selectedPaper}
+                      onOpenPrintModal={() => setIsPrintModalOpen(true)}
+                      onSaveOrder={handleSaveOrder}
+                      isSavingOrder={isSavingOrder}
                     />
 
-                    {/* Biểu đồ so sánh In Nhanh vs Offset */}
-                    <BreakEvenChart
-                      currentQty={quantity}
-                      chosenTech={result.chosenTech}
-                      comparisonTable={result.recommendation?.comparisonTable}
-                      breakEvenQty={result.recommendation?.breakEvenQty}
-                      reason={result.recommendation?.reason}
-                    />
+                    {/* Hộp Trực Quan Hóa dạng Tabs: Chọn xem Sơ Đồ Cắt Giấy hoặc So Sánh Hòa Vốn */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-4 space-y-3">
+                      {/* Segmented Control cho Tabs Trực Quan */}
+                      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setResultTab('visual')}
+                          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-all ${
+                            resultTab === 'visual' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <LayoutGrid className="w-3.5 h-3.5" />
+                          Sơ Đồ Cắt Giấy 2D
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setResultTab('breakeven')}
+                          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-all ${
+                            resultTab === 'breakeven' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <TrendingUp className="w-3.5 h-3.5" />
+                          So Sánh Hòa Vốn
+                        </button>
+                      </div>
+
+                      {/* Nội dung Tab */}
+                      {resultTab === 'visual' && (
+                        <ImpositionVisualizer
+                          imposition={result.imposition}
+                          productName={jobName}
+                          productWidthMm={widthMm}
+                          productHeightMm={heightMm}
+                        />
+                      )}
+
+                      {resultTab === 'breakeven' && (
+                        <BreakEvenChart
+                          currentQty={quantity}
+                          chosenTech={result.chosenTech}
+                          comparisonTable={result.recommendation?.comparisonTable}
+                          breakEvenQty={result.recommendation?.breakEvenQty}
+                          reason={result.recommendation?.reason}
+                        />
+                      )}
+                    </div>
                   </>
-                )}
-              </div>
-
-              {/* CỘT 3: TỔNG HỢP CHI PHÍ & GIÁ BÁN & IN BÁO GIÁ (3 CỘT) */}
-              <div className="lg:col-span-3">
-                {result && selectedPaper && (
-                  <CostBreakdownCard
-                    input={{
-                      jobName,
-                      productType,
-                      printTech,
-                      quantity,
-                      widthMm,
-                      heightMm,
-                      bleedMm,
-                      paperTypeId,
-                      printSides,
-                      colorsFront,
-                      colorsBack,
-                      offsetWorkType,
-                      selectedFinishing,
-                      profitMarginPercent,
-                      discountAmount,
-                      vatPercent,
-                    }}
-                    result={result}
-                    paperType={selectedPaper}
-                    onOpenPrintModal={() => setIsPrintModalOpen(true)}
-                    onSaveOrder={handleSaveOrder}
-                    isSavingOrder={isSavingOrder}
-                  />
+                ) : (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto text-blue-500 mb-2" />
+                    Đang tính toán chi phí...
+                  </div>
                 )}
               </div>
             </div>
@@ -794,10 +743,10 @@ export default function HomePage() {
         {/* PHÂN HỆ 3: QUẢN LÝ GIÁ GIẤY */}
         {activeTab === 'papers' && <PaperManager />}
 
-        {/* PHÂN HỆ 4: QUẢN LÝ MÁY IN OFFSET & KTS */}
+        {/* PHÂN HỆ 4: QUẢN LÝ MÁY IN */}
         {activeTab === 'machines' && <MachineManager />}
 
-        {/* PHÂN HỆ 5: QUẢN LÝ DỊCH VỤ GIA CÔNG */}
+        {/* PHÂN HỆ 5: QUẢN LÝ GIA CÔNG */}
         {activeTab === 'finishing' && <FinishingManager />}
 
         {/* PHÂN HỆ 6: QUẢN LÝ KHÁCH HÀNG */}
@@ -807,7 +756,7 @@ export default function HomePage() {
         {activeTab === 'settings' && <SettingsManager />}
       </main>
 
-      {/* Modal In Báo Giá Chuẩn A4 & Lệnh Sản Xuất */}
+      {/* Modal In Báo Giá Chuẩn A4 */}
       {result && selectedPaper && (
         <QuotePrintModal
           isOpen={isPrintModalOpen}
