@@ -12,6 +12,7 @@ import { MachineManager } from '@/components/MachineManager';
 import { FinishingManager } from '@/components/FinishingManager';
 import { CustomerManager } from '@/components/CustomerManager';
 import { SettingsManager } from '@/components/SettingsManager';
+import { PaperSelectorModal } from '@/components/PaperSelectorModal';
 import {
   CalculationInput,
   CalculationResult,
@@ -36,6 +37,7 @@ import {
   LayoutGrid,
   TrendingUp,
   FileText,
+  Search,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -58,6 +60,7 @@ export default function HomePage() {
   const [heightMm, setHeightMm] = useState(297);
   const [bleedMm, setBleedMm] = useState(2);
   const [paperTypeId, setPaperTypeId] = useState<number>(0);
+  const [isPaperModalOpen, setIsPaperModalOpen] = useState(false);
   const [printSides, setPrintSides] = useState<'1_side' | '2_side'>('2_side');
   const [colorsFront, setColorsFront] = useState(4);
   const [colorsBack, setColorsBack] = useState(4);
@@ -466,24 +469,67 @@ export default function HomePage() {
 
                     {/* Loại giấy */}
                     <div>
-                      <label className="block text-slate-600 font-medium mb-1">Chất liệu giấy in</label>
-                      <select
-                        value={paperTypeId}
-                        onChange={(e) => setPaperTypeId(Number(e.target.value))}
-                        className="w-full border border-slate-300 rounded-lg p-2.5 bg-white font-medium text-slate-800 text-xs"
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-slate-700 font-bold">Chất liệu giấy in</label>
+                        <button
+                          type="button"
+                          onClick={() => setIsPaperModalOpen(true)}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition-colors"
+                        >
+                          <Search className="w-3.5 h-3.5" />
+                          Tra cứu & Đổi loại giấy (125+ loại)
+                        </button>
+                      </div>
+
+                      {/* Selected Paper Preview Card */}
+                      <div
+                        onClick={() => setIsPaperModalOpen(true)}
+                        className="group relative cursor-pointer border border-slate-300 hover:border-blue-500 bg-white hover:bg-blue-50/20 p-3 rounded-xl transition-all shadow-2xs"
                       >
-                        {Object.entries(groupedPapers).map(([groupName, groupItems]) =>
-                          groupItems.length > 0 ? (
-                            <optgroup key={groupName} label={groupName}>
-                              {groupItems.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name} — {p.pricePerRam > 0 ? `${p.pricePerRam.toLocaleString('vi-VN')}đ/ram` : `${p.pricePerKg.toLocaleString('vi-VN')}đ/kg`}
-                                </option>
-                              ))}
-                            </optgroup>
-                          ) : null
-                        )}
-                      </select>
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                NCC: {selectedPaper?.supplier || 'Thuận Phát'}
+                              </span>
+                              <span className="font-mono text-xs text-slate-500 font-semibold">
+                                {selectedPaper?.code}
+                              </span>
+                            </div>
+                            <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">
+                              {selectedPaper?.name || 'Chưa chọn giấy'}
+                            </h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              Định lượng: <strong className="text-blue-700">{selectedPaper?.gsm} gsm</strong> &bull; Khổ mẹ: <strong>{selectedPaper?.parentWidthCm} × {selectedPaper?.parentHeightCm} cm</strong>
+                            </p>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <div className="text-[11px] font-medium text-slate-500">Đơn giá áp dụng:</div>
+                            <div className="font-black text-emerald-700 text-sm">
+                              {(
+                                (result?.quantities?.parentSheetsNeeded || 0) >= 500
+                                  ? (selectedPaper?.priceAbove500 || selectedPaper?.pricePerRam || 0)
+                                  : (selectedPaper?.priceBelow500 || selectedPaper?.priceAbove500 || selectedPaper?.pricePerRam || 0)
+                              ).toLocaleString('vi-VN')} đ/ram
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              {(result?.quantities?.parentSheetsNeeded || 0) >= 500
+                                ? 'Mức ≥ 500 tờ (nguyên ram)'
+                                : 'Mức < 500 tờ (bán lẻ)'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400">
+                            Bấm vào đây để tìm theo NCC, loại giấy, định lượng gsm...
+                          </span>
+                          <span className="text-blue-600 font-semibold group-hover:underline">
+                            Đổi giấy &rarr;
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Số mặt in & Công nghệ in */}
@@ -823,6 +869,18 @@ export default function HomePage() {
           }}
         />
       )}
+
+      {/* Modal Tra Cứu & Chọn Loại Giấy */}
+      <PaperSelectorModal
+        isOpen={isPaperModalOpen}
+        onClose={() => setIsPaperModalOpen(false)}
+        papers={papers}
+        selectedPaperId={paperTypeId}
+        onSelectPaper={(paper) => {
+          setPaperTypeId(paper.id);
+          setIsPaperModalOpen(false);
+        }}
+      />
     </div>
   );
 }

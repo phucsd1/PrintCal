@@ -202,14 +202,14 @@ export function calculatePrintCost({
   const parentAreaM2 = (paperType.parentWidthCm / 100) * (paperType.parentHeightCm / 100);
   const kgNeeded = Math.round(((parentSheetsNeeded * parentAreaM2 * paperType.gsm) / 1000) * 10) / 10;
 
-  // 5. Tiền giấy
-  let paperCost = 0;
-  if (paperType.unit === 'kg' && paperType.pricePerKg > 0) {
-    paperCost = Math.round(kgNeeded * paperType.pricePerKg);
-  } else {
-    // Tính theo ram quy đổi tờ
-    paperCost = Math.round(parentSheetsNeeded * (paperType.pricePerRam / 500));
-  }
+  // 5. Tiền giấy: Bỏ giá /kg, chỉ áp dụng giá trên 500 tờ (trên ram) và giá dưới 500 tờ (dưới ram)
+  const priceAbove500 = paperType.priceAbove500 || paperType.pricePerRam;
+  const priceBelow500 = paperType.priceBelow500 || priceAbove500;
+
+  // Nếu số tờ mẹ >= 500 (trên 1 ram) áp dụng giá sỉ nguyên ram, nếu < 500 tờ áp dụng giá lẻ dưới ram
+  const isWholesale = parentSheetsNeeded >= 500;
+  const effectiveRamPrice = isWholesale ? priceAbove500 : priceBelow500;
+  const paperCost = Math.round(parentSheetsNeeded * (effectiveRamPrice / 500));
 
   // 6. Tiền in ấn
   let plateCost = 0;
@@ -463,7 +463,10 @@ function runQuickEstimate(
 
   const cuts = Math.max(1, imposition.cutsPerParentSheet);
   const parentSheets = Math.ceil(totalSheets / cuts);
-  const paperCost = Math.round(parentSheets * (paperType.pricePerRam / 500));
+  const pAbove = paperType.priceAbove500 || paperType.pricePerRam;
+  const pBelow = paperType.priceBelow500 || pAbove;
+  const effectiveRamPrice = parentSheets >= 500 ? pAbove : pBelow;
+  const paperCost = Math.round(parentSheets * (effectiveRamPrice / 500));
 
   let printCost = 0;
   if (isDigital) {

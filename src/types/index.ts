@@ -10,9 +10,12 @@ export interface PaperType {
   gsm: number;
   parentWidthCm: number;
   parentHeightCm: number;
-  pricePerRam: number;
-  pricePerKg: number;
-  unit: 'ram' | 'kg';
+  priceAbove500: number; // Giá trên 500 tờ (trên ram)
+  priceBelow500: number; // Giá dưới 500 tờ (dưới ram)
+  pricePerRam: number; // Giá trên ram (tương đương priceAbove500)
+  supplier: string; // Nhà cung cấp (NCC)
+  pricePerKg?: number; // Không bắt buộc (đã bỏ giá/kg theo yêu cầu)
+  unit?: 'ram' | 'kg';
   description?: string;
   isActive: boolean;
 }

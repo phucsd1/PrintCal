@@ -22,6 +22,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Không tìm thấy loại giấy yêu cầu' }, { status: 400 });
     }
 
+    const pAbove = Number(paperRow.price_above_500) || Number(paperRow.price_per_ram) || 0;
+    const pBelow = Number(paperRow.price_below_500) || pAbove;
+
     const paperType: PaperType = {
       id: paperRow.id as number,
       code: paperRow.code as string,
@@ -29,10 +32,13 @@ export async function POST(req: NextRequest) {
       gsm: paperRow.gsm as number,
       parentWidthCm: paperRow.parent_width_cm as number,
       parentHeightCm: paperRow.parent_height_cm as number,
-      pricePerRam: paperRow.price_per_ram as number,
-      pricePerKg: paperRow.price_per_kg as number,
-      unit: paperRow.unit as 'ram' | 'kg',
-      description: paperRow.description as string,
+      priceAbove500: pAbove,
+      priceBelow500: pBelow,
+      pricePerRam: pAbove,
+      supplier: (paperRow.supplier as string) || 'Thuận Phát',
+      pricePerKg: 0,
+      unit: 'ram',
+      description: (paperRow.description as string) || '',
       isActive: Boolean(paperRow.is_active),
     };
 
