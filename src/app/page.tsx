@@ -41,6 +41,23 @@ import {
   Search,
 } from 'lucide-react';
 
+const INTC_PAPER_PRESETS = [
+  { code: 'C100', label: 'C100' },
+  { code: 'C120', label: 'C120' },
+  { code: 'C150', label: 'C150' },
+  { code: 'C200', label: 'C200' },
+  { code: 'C250', label: 'C250' },
+  { code: 'C300', label: 'C300' },
+  { code: 'I250', label: 'I250' },
+  { code: 'I300', label: 'I300' },
+  { code: 'I350', label: 'I350' },
+  { code: 'F100', label: 'F100' },
+  { code: 'F120', label: 'F120' },
+  { code: 'F180', label: 'F180' },
+  { code: 'F230', label: 'F230' },
+  { code: 'F250', label: 'F250' },
+];
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('calculator');
 
@@ -491,55 +508,137 @@ export default function HomePage() {
                         </button>
                       </div>
 
+                      {/* Thanh chọn nhanh 16 mã giấy INTC khi in nhanh kèm giấy */}
+                      {((printTech === 'digital' || (printTech === 'auto' && result?.chosenTech === 'digital')) && digitalMode === 'with_paper') && (
+                        <div className="mb-2.5 p-2.5 bg-sky-50/80 border border-sky-200 rounded-xl space-y-1.5 shadow-2xs">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-sky-950">
+                            <span className="flex items-center gap-1">
+                              <Sparkles className="w-3.5 h-3.5 text-sky-600" />
+                              Chọn nhanh 16 mã giấy INTC (14.03.2026):
+                            </span>
+                            <span className="text-[10px] text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md font-bold border border-emerald-200">
+                              Trọn gói in + giấy &bull; 0 bù hao
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {INTC_PAPER_PRESETS.map((preset) => {
+                              const isSelected = selectedPaper?.code.toUpperCase().includes(preset.code);
+                              return (
+                                <button
+                                  key={preset.code}
+                                  type="button"
+                                  onClick={() => {
+                                    const matched = papers.find((p) => p.code.toUpperCase().includes(preset.code));
+                                    if (matched) setPaperTypeId(matched.id);
+                                  }}
+                                  className={`px-2 py-1 rounded text-[11px] font-semibold transition-all ${
+                                    isSelected
+                                      ? 'bg-sky-600 text-white shadow-2xs ring-2 ring-sky-300'
+                                      : 'bg-white hover:bg-sky-100 text-slate-700 border border-slate-200'
+                                  }`}
+                                >
+                                  {preset.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Selected Paper Preview Card */}
-                      <div
-                        onClick={() => setIsPaperModalOpen(true)}
-                        className="group relative cursor-pointer border border-slate-300 hover:border-blue-500 bg-white hover:bg-blue-50/20 p-3 rounded-xl transition-all shadow-2xs"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                                NCC: {selectedPaper?.supplier || 'Thuận Phát'}
-                              </span>
-                              <span className="font-mono text-xs text-slate-500 font-semibold">
-                                {selectedPaper?.code}
-                              </span>
+                      {((printTech === 'digital' || (printTech === 'auto' && result?.chosenTech === 'digital')) && digitalMode === 'with_paper') ? (
+                        <div
+                          onClick={() => setIsPaperModalOpen(true)}
+                          className="group relative cursor-pointer border border-sky-300 hover:border-sky-500 bg-sky-50/40 hover:bg-sky-50/70 p-3 rounded-xl transition-all shadow-2xs"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-900 border border-sky-300">
+                                  Phôi In Kèm Giấy INTC
+                                </span>
+                                <span className="font-mono text-xs text-sky-700 font-bold">
+                                  {selectedPaper?.code}
+                                </span>
+                              </div>
+                              <h4 className="font-bold text-slate-900 text-sm group-hover:text-sky-600 transition-colors">
+                                {selectedPaper?.name || 'Chưa chọn giấy'}
+                              </h4>
+                              <p className="text-[11px] text-slate-600 mt-0.5">
+                                Định lượng: <strong className="text-sky-700">{selectedPaper?.gsm} gsm</strong> &bull; Khổ phôi in: <strong>32.5 × 43 cm</strong> (hoặc 32.5 × 35.5 cm)
+                              </p>
                             </div>
-                            <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">
-                              {selectedPaper?.name || 'Chưa chọn giấy'}
-                            </h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                              Định lượng: <strong className="text-blue-700">{selectedPaper?.gsm} gsm</strong> &bull; Khổ mẹ: <strong>{selectedPaper?.parentWidthCm} × {selectedPaper?.parentHeightCm} cm</strong>
-                            </p>
+
+                            <div className="text-right shrink-0">
+                              <div className="text-[11px] font-medium text-slate-500">Tiền phôi giấy:</div>
+                              <div className="font-black text-emerald-700 text-sm">
+                                0 đ (Đã gồm trong giá in)
+                              </div>
+                              <div className="text-[10px] text-emerald-600 font-bold">
+                                In bao nhiêu tính bấy nhiêu
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="text-right shrink-0">
-                            <div className="text-[11px] font-medium text-slate-500">Đơn giá áp dụng:</div>
-                            <div className="font-black text-emerald-700 text-sm">
-                              {(
-                                (result?.quantities?.parentSheetsNeeded || 0) >= 500
-                                  ? (selectedPaper?.priceAbove500 || selectedPaper?.pricePerRam || 0)
-                                  : (selectedPaper?.priceBelow500 || selectedPaper?.priceAbove500 || selectedPaper?.pricePerRam || 0)
-                              ).toLocaleString('vi-VN')} đ/ram
-                            </div>
-                            <div className="text-[10px] text-slate-400">
-                              {(result?.quantities?.parentSheetsNeeded || 0) >= 500
-                                ? 'Mức ≥ 500 tờ (nguyên ram)'
-                                : 'Mức < 500 tờ (bán lẻ)'}
-                            </div>
+                          <div className="mt-2 pt-2 border-t border-sky-200/60 flex items-center justify-between text-[11px]">
+                            <span className="text-slate-600 flex items-center gap-1">
+                              <span className="text-emerald-700 font-bold">✓ Không bù hao:</span> Đúng {result?.quantities?.totalPrintSheets || Math.ceil(quantity / 2)} tờ in phôi thực tế
+                            </span>
+                            <span className="text-sky-600 font-semibold group-hover:underline">
+                              Đổi loại giấy &rarr;
+                            </span>
                           </div>
                         </div>
+                      ) : (
+                        <div
+                          onClick={() => setIsPaperModalOpen(true)}
+                          className="group relative cursor-pointer border border-slate-300 hover:border-blue-500 bg-white hover:bg-blue-50/20 p-3 rounded-xl transition-all shadow-2xs"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                  NCC: {selectedPaper?.supplier || 'Thuận Phát'}
+                                </span>
+                                <span className="font-mono text-xs text-slate-500 font-semibold">
+                                  {selectedPaper?.code}
+                                </span>
+                              </div>
+                              <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">
+                                {selectedPaper?.name || 'Chưa chọn giấy'}
+                              </h4>
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                Định lượng: <strong className="text-blue-700">{selectedPaper?.gsm} gsm</strong> &bull; Khổ mẹ: <strong>{selectedPaper?.parentWidthCm} × {selectedPaper?.parentHeightCm} cm</strong>
+                              </p>
+                            </div>
 
-                        <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                          <span className="text-slate-400">
-                            Bấm vào đây để tìm theo NCC, loại giấy, định lượng gsm...
-                          </span>
-                          <span className="text-blue-600 font-semibold group-hover:underline">
-                            Đổi giấy &rarr;
-                          </span>
+                            <div className="text-right shrink-0">
+                              <div className="text-[11px] font-medium text-slate-500">Đơn giá áp dụng:</div>
+                              <div className="font-black text-emerald-700 text-sm">
+                                {(
+                                  (result?.quantities?.parentSheetsNeeded || 0) >= 500
+                                    ? (selectedPaper?.priceAbove500 || selectedPaper?.pricePerRam || 0)
+                                    : (selectedPaper?.priceBelow500 || selectedPaper?.priceAbove500 || selectedPaper?.pricePerRam || 0)
+                                ).toLocaleString('vi-VN')} đ/ram
+                              </div>
+                              <div className="text-[10px] text-slate-400">
+                                {(result?.quantities?.parentSheetsNeeded || 0) >= 500
+                                  ? 'Mức ≥ 500 tờ (nguyên ram)'
+                                  : 'Mức < 500 tờ (bán lẻ)'}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                            <span className="text-slate-400">
+                              Bấm vào đây để tìm theo NCC, loại giấy, định lượng gsm...
+                            </span>
+                            <span className="text-blue-600 font-semibold group-hover:underline">
+                              Đổi giấy &rarr;
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* Số mặt in & Công nghệ in */}
@@ -637,8 +736,19 @@ export default function HomePage() {
                         </div>
 
                         {digitalMode === 'with_paper' ? (
-                          <div className="text-[11px] text-sky-800 bg-white/70 p-2 rounded-lg border border-sky-100">
-                            <strong>Bảng giá INTC (14.03.2026):</strong> Trọn gói công in + giấy theo mã giấy. Khổ in 325&times;430 & 325&times;355mm. Phụ phí SL ít: &lt;50 tờ (+30k), &lt;100 tờ (+20k), &ge;100 tờ miễn phí.
+                          <div className="text-[11px] text-sky-900 bg-white/90 p-2.5 rounded-lg border border-sky-100 space-y-1">
+                            <div className="flex items-center justify-between font-bold">
+                              <span>📦 Bảng giá INTC (14.03.2026) - Trọn gói in & phôi giấy:</span>
+                              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-bold border border-emerald-200">
+                                Không bù hao (0 tờ)
+                              </span>
+                            </div>
+                            <div className="text-slate-600">
+                              Khổ in phôi cắt sẵn 32.5&times;43cm & 32.5&times;35.5cm. Số tờ in cần chạy: <strong className="text-sky-950 font-bold">{result?.quantities?.totalPrintSheets || 0} tờ phôi</strong>.
+                            </div>
+                            <div className="text-[10px] text-slate-500">
+                              Phụ phí SL ít: &lt;50 tờ (+30k), &lt;100 tờ (+20k), &ge;100 tờ miễn phí hoàn toàn.
+                            </div>
                           </div>
                         ) : (
                           <div className="text-[11px] text-sky-800 bg-white/70 p-2 rounded-lg border border-sky-100 space-y-2">

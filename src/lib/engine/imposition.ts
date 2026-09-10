@@ -55,31 +55,53 @@ export function calculateImposition({
     if (digitalMode === 'with_paper') {
       // BẢNG GIÁ IN NHANH KÈM GIẤY: Khổ 325 x 430 mm (chính) & 325 x 355 mm (Fort)
       digitalCandidates = [
-        { name: 'Khổ in kèm giấy (325 x 430 mm)', w: 430, h: 325, cuts: 4 },
-        { name: 'Khổ in kèm giấy đứng (325 x 430 mm)', w: 325, h: 430, cuts: 4 },
-        { name: 'Khổ in kèm giấy (325 x 355 mm)', w: 355, h: 325, cuts: 4 },
+        { name: 'Khổ in kèm giấy (325 x 430 mm)', w: 430, h: 325, cuts: 1 },
+        { name: 'Khổ in kèm giấy (325 x 355 mm)', w: 355, h: 325, cuts: 1 },
       ];
     } else {
       // BẢNG GIÁ IN GIA CÔNG KONICA C12000 / C12010S: 5 khổ in máy
       digitalCandidates = [
-        { name: 'Khổ Konica A3+ (330 x 483 mm)', w: 483, h: 330, cuts: 4 },
-        { name: 'Khổ Konica A3 chuẩn (297 x 420 mm)', w: 420, h: 297, cuts: 4 },
-        { name: 'Khổ Konica 330 x 355 mm', w: 355, h: 330, cuts: 4 },
-        { name: 'Khổ Konica A4 chuẩn (210 x 297 mm)', w: 297, h: 210, cuts: 8 },
+        { name: 'Khổ Konica A4 chuẩn (210 x 297 mm)', w: 297, h: 210, cuts: 1 },
+        { name: 'Khổ Konica 330 x 355 mm', w: 355, h: 330, cuts: 1 },
+        { name: 'Khổ Konica A3 chuẩn (297 x 420 mm)', w: 420, h: 297, cuts: 1 },
+        { name: 'Khổ Konica A3+ (330 x 483 mm)', w: 483, h: 330, cuts: 1 },
         { name: 'Khổ Konica Banner (330 x 1200 mm)', w: 1200, h: 330, cuts: 1 },
       ];
     }
 
     for (const dc of digitalCandidates) {
-      const cuts = calculateCutsFromParent(parentW, parentH, dc.w, dc.h);
-      const cutScheme = determineCutScheme(parentW, parentH, dc.w, dc.h, cuts);
+      const isWithPaper = digitalMode === 'with_paper';
+      const cutScheme: PaperCutScheme = isWithPaper
+        ? {
+            parentWidthMm: dc.w,
+            parentHeightMm: dc.h,
+            cutType: 'chia_1',
+            cutDescription: 'Phôi giấy cắt sẵn khổ chuẩn của xưởng INTC (đã gồm trong đơn giá in, không cần xả từ khổ mẹ)',
+            cutsCount: 1,
+            cutSheetWidthMm: dc.w,
+            cutSheetHeightMm: dc.h,
+            wasteAreaPercent: 0,
+            cutLines: [],
+            blocks: [
+              {
+                index: 1,
+                x: 0,
+                y: 0,
+                w: dc.w,
+                h: dc.h,
+                name: `Phôi in trọn gói (${dc.w} × ${dc.h} mm)`,
+              },
+            ],
+          }
+        : determineCutScheme(parentW, parentH, dc.w, dc.h, calculateCutsFromParent(parentW, parentH, dc.w, dc.h));
+
       candidates.push({
         name: dc.name,
         sheetWidthMm: dc.w,
         sheetHeightMm: dc.h,
-        cutsFromParent: cuts,
+        cutsFromParent: isWithPaper ? 1 : calculateCutsFromParent(parentW, parentH, dc.w, dc.h),
         cutScheme,
-        gripperMarginMm: 4,
+        gripperMarginMm: 2.5,
       });
     }
   } else {
@@ -138,7 +160,7 @@ export function calculateImposition({
     });
   }
 
-  // 2. Đánh giá tất cả phương án để tìm phương án cho ra tổng số con trên tờ mẹ cao nhất
+  // 2. Đánh giá tất cả phương án để tìm phương án tối ưu nhất
   let bestCandidateResult: {
     candidate: EvaluationCandidate;
     ups: number;
@@ -159,20 +181,56 @@ export function calculateImposition({
       itemH: heightMm,
       bleedMm,
       gripperMarginMm: cand.gripperMarginMm,
+      isDigital: printTech === 'digital',
     });
 
-    const totalUps = layout.ups * cand.cutsFromParent;
-
-    if (!bestCandidateResult) {
-      bestCandidateResult = { candidate: cand, ...layout };
-    } else {
-      const currentBestTotal = bestCandidateResult.ups * bestCandidateResult.candidate.cutsFromParent;
-      if (totalUps > currentBestTotal) {
-        bestCandidateResult = { candidate: cand, ...layout };
-      } else if (totalUps === currentBestTotal) {
-        // Nếu tổng số con bằng nhau, ưu tiên phương án tờ in nhỏ hơn (chia 4 hoặc chia 2) để tiết kiệm chi phí in máy
-        if (cand.cutsFromParent > bestCandidateResult.candidate.cutsFromParent) {
+    if (printTech === 'digital') {
+      if (digitalMode === 'with_paper') {
+        // In nhanh kèm giấy: Chọn khổ phôi có số con (ups) trên tờ in lớn nhất
+        // Nếu số con bằng nhau, ưu tiên 325x430 mm (hoặc 325x355 mm nếu là Fort F180/F230 vì rẻ hơn)
+        if (!bestCandidateResult) {
           bestCandidateResult = { candidate: cand, ...layout };
+        } else {
+          if (layout.ups > bestCandidateResult.ups) {
+            bestCandidateResult = { candidate: cand, ...layout };
+          } else if (layout.ups === bestCandidateResult.ups && layout.ups > 0) {
+            const isFortSpecial = paperType.code.toUpperCase().includes('F180') || paperType.code.toUpperCase().includes('F230');
+            const isCand355 = cand.name.includes('355');
+            if (isFortSpecial && isCand355) {
+              bestCandidateResult = { candidate: cand, ...layout };
+            }
+          }
+        }
+      } else {
+        // In gia công Konica C12000:
+        // Chọn khổ máy in có layout.ups > 0 và chi phí ước tính trên mỗi con thành phẩm là thấp nhất
+        // (Tránh trường hợp in tờ rơi A4 mà lại chọn nhầm khổ banner 1.2 mét)
+        const approxClick = getApproxKonicaClick(cand.sheetWidthMm, cand.sheetHeightMm);
+        const costPerPiece = layout.ups > 0 ? approxClick / layout.ups : Infinity;
+
+        if (!bestCandidateResult) {
+          bestCandidateResult = { candidate: cand, ...layout };
+        } else {
+          const prevClick = getApproxKonicaClick(bestCandidateResult.candidate.sheetWidthMm, bestCandidateResult.candidate.sheetHeightMm);
+          const prevCostPerPiece = bestCandidateResult.ups > 0 ? prevClick / bestCandidateResult.ups : Infinity;
+          if (layout.ups > 0 && costPerPiece < prevCostPerPiece) {
+            bestCandidateResult = { candidate: cand, ...layout };
+          }
+        }
+      }
+    } else {
+      // In Offset: Ưu tiên tổng số con sinh ra từ 1 tờ giấy mẹ
+      const totalUps = layout.ups * cand.cutsFromParent;
+      if (!bestCandidateResult) {
+        bestCandidateResult = { candidate: cand, ...layout };
+      } else {
+        const currentBestTotal = bestCandidateResult.ups * bestCandidateResult.candidate.cutsFromParent;
+        if (totalUps > currentBestTotal) {
+          bestCandidateResult = { candidate: cand, ...layout };
+        } else if (totalUps === currentBestTotal) {
+          if (cand.cutsFromParent > bestCandidateResult.candidate.cutsFromParent) {
+            bestCandidateResult = { candidate: cand, ...layout };
+          }
         }
       }
     }
@@ -207,12 +265,15 @@ export function calculateImposition({
   }
 
   const { candidate, ups, cols, rows, isRotated, boxes, efficiency, usableW, usableH } = bestCandidateResult;
+  const isWithPaper = printTech === 'digital' && digitalMode === 'with_paper';
 
   return {
     parentSheet: {
-      widthCm: paperType.parentWidthCm,
-      heightCm: paperType.parentHeightCm,
-      name: `${paperType.name} (${paperType.parentWidthCm}x${paperType.parentHeightCm}cm)`,
+      widthCm: isWithPaper ? candidate.sheetWidthMm / 10 : paperType.parentWidthCm,
+      heightCm: isWithPaper ? candidate.sheetHeightMm / 10 : paperType.parentHeightCm,
+      name: isWithPaper
+        ? `Phôi giấy INTC (${candidate.sheetWidthMm / 10}x${candidate.sheetHeightMm / 10}cm)`
+        : `${paperType.name} (${paperType.parentWidthCm}x${paperType.parentHeightCm}cm)`,
     },
     printSheet: {
       widthMm: candidate.sheetWidthMm,
@@ -220,8 +281,8 @@ export function calculateImposition({
       name: candidate.name,
     },
     upsPerPrintSheet: ups,
-    cutsPerParentSheet: candidate.cutsFromParent,
-    totalUpsPerParentSheet: ups * candidate.cutsFromParent,
+    cutsPerParentSheet: isWithPaper ? 1 : candidate.cutsFromParent,
+    totalUpsPerParentSheet: isWithPaper ? ups : ups * candidate.cutsFromParent,
     gripperMarginMm: candidate.gripperMarginMm,
     usableWidthMm: usableW,
     usableHeightMm: usableH,
@@ -234,6 +295,15 @@ export function calculateImposition({
   };
 }
 
+function getApproxKonicaClick(w: number, h: number): number {
+  const maxDim = Math.max(w, h);
+  if (maxDim <= 300) return 800; // A4
+  if (maxDim <= 360) return 1000; // 330x355
+  if (maxDim <= 425) return 1600; // A3
+  if (maxDim <= 500) return 2500; // 330x483 (A3+)
+  return 7000; // 330x1200 Banner
+}
+
 // -----------------------------------------------------------------------------------------
 // THUẬT TOÁN XẾP BÌNH BÀI CHUẨN XÉNG CÔNG NGHIỆP TRÊN TỜ IN MÁY
 // -----------------------------------------------------------------------------------------
@@ -244,6 +314,7 @@ interface LayoutEvalParams {
   itemH: number;
   bleedMm: number;
   gripperMarginMm: number;
+  isDigital?: boolean;
 }
 
 interface LayoutResult {
@@ -264,35 +335,56 @@ function evaluateImpositionLayout({
   itemH,
   bleedMm,
   gripperMarginMm,
+  isDigital = false,
 }: LayoutEvalParams): LayoutResult {
   // Quy ước máy in:
-  // Cạnh dài là cạnh bắt nhíp: width = max(sheetW, sheetH), height = min(sheetW, sheetH)
+  // Cạnh dài: width = max(sheetW, sheetH), Cạnh ngắn: height = min(sheetW, sheetH)
   const W = Math.max(sheetW, sheetH);
   const H = Math.min(sheetW, sheetH);
 
-  // Lề kẹp nhíp ở cạnh đáy (gripperMarginMm = 10mm)
-  // Lề đuôi (đối diện nhíp): 4mm
-  // Lề 2 bên biên: 4mm mỗi bên (tổng 8mm)
-  const marginSide = 4;
-  const marginTail = 4;
+  let marginSide = 4;
+  let marginTail = 4;
+  let marginGripper = gripperMarginMm;
+
+  if (isDigital) {
+    // Máy in kỹ thuật số: Không có càng kẹp nhíp cơ học 10mm như offset.
+    // Lề trắng máy in (non-printable margin) chỉ 2.5mm xung quanh 4 mép.
+    marginSide = 2.5;
+    marginTail = 2.5;
+    marginGripper = 2.5;
+  }
+
   const usableW = W - marginSide * 2;
-  const usableH = H - (gripperMarginMm + marginTail);
+  const usableH = H - (marginGripper + marginTail);
 
   if (usableW < itemW && usableW < itemH) {
     return { ups: 0, cols: 0, rows: 0, isRotated: false, boxes: [], efficiency: 0, usableW, usableH };
   }
 
   // --- Cách 1: Xếp Thẳng (Không xoay) ---
-  // Chiều ngang chứa C1 cột thành phẩm, có tràn lề 2mm ở 2 mép ngoài cùng
-  // Công thức: C1 * itemW + 2 * bleedMm <= usableW
-  const cols1 = Math.max(0, Math.floor((usableW - 2 * bleedMm) / itemW));
-  const rows1 = Math.max(0, Math.floor((usableH - 2 * bleedMm) / itemH));
+  let cols1 = 0;
+  let rows1 = 0;
+  if (isDigital) {
+    // In nhanh: Các con xếp sát nhau (cắt 1 nhát chung dao). Tràn lề ăn vào biên giấy ngoài cùng.
+    cols1 = Math.max(0, Math.floor(usableW / itemW));
+    rows1 = Math.max(0, Math.floor(usableH / itemH));
+  } else {
+    // In offset: Chừa lề kẹp nhíp và đường tràn lề
+    cols1 = Math.max(0, Math.floor((usableW - 2 * bleedMm) / itemW));
+    rows1 = Math.max(0, Math.floor((usableH - 2 * bleedMm) / itemH));
+  }
   const ups1 = cols1 * rows1;
 
   // --- Cách 2: Xếp Xoay 90 độ ---
-  // Chiều ngang xếp theo itemH, chiều dọc xếp theo itemW
-  const cols2 = Math.max(0, Math.floor((usableW - 2 * bleedMm) / itemH));
-  const rows2 = Math.max(0, Math.floor((usableH - 2 * bleedMm) / itemW));
+  let cols2 = 0;
+  let rows2 = 0;
+  if (isDigital) {
+    cols2 = Math.max(0, Math.floor(usableW / itemH));
+    rows2 = Math.max(0, Math.floor(usableH / itemW));
+  } else {
+    cols2 = Math.max(0, Math.floor((usableW - 2 * bleedMm) / itemH));
+    rows2 = Math.max(0, Math.floor((usableH - 2 * bleedMm) / itemW));
+  }
   const ups2 = cols2 * rows2;
 
   // Chọn phương án tốt nhất giữa Xếp Thẳng (ups1) và Xếp Xoay 90° (ups2)
@@ -313,11 +405,15 @@ function evaluateImpositionLayout({
   const boxW = isRotated ? itemH : itemW;
   const boxH = isRotated ? itemW : itemH;
 
-  // Canh giữa cụm con trong vùng in hữu dụng
-  const blockW = bestCols * boxW + 2 * bleedMm;
-  const blockH = bestRows * boxH + 2 * bleedMm;
-  const startX = marginSide + Math.max(0, Math.floor((usableW - blockW) / 2)) + bleedMm;
-  const startY = marginTail + Math.max(0, Math.floor((usableH - blockH) / 2)) + bleedMm;
+  // Canh giữa cụm con trong tờ in
+  const blockW = bestCols * boxW;
+  const blockH = bestRows * boxH;
+  const startX = isDigital
+    ? Math.max(0, Math.round(((W - blockW) / 2) * 10) / 10)
+    : marginSide + Math.max(0, Math.floor((usableW - (blockW + 2 * bleedMm)) / 2)) + bleedMm;
+  const startY = isDigital
+    ? Math.max(0, Math.round(((H - blockH) / 2) * 10) / 10)
+    : marginTail + Math.max(0, Math.floor((usableH - (blockH + 2 * bleedMm)) / 2)) + bleedMm;
 
   let idx = 1;
   for (let r = 0; r < bestRows; r++) {

@@ -216,19 +216,27 @@ export function calculatePrintCost({
   }
 
   // Bù hao gia công theo %
-  finishingWasteSheets += Math.ceil((netPrintSheets * totalFinishingWastePercent) / 100);
+  if (chosenTech === 'offset') {
+    finishingWasteSheets += Math.ceil((netPrintSheets * totalFinishingWastePercent) / 100);
+  } else {
+    // In nhanh KTS: Không tính bù hao gia công vào tờ in
+    finishingWasteSheets = 0;
+  }
 
   // 4. Bù hao in ấn & Tổng số tờ in
   let printWasteSheets = 0;
   if (chosenTech === 'offset') {
     printWasteSheets = offsetMachine?.defaultWasteSheets ?? 100;
   } else {
-    printWasteSheets = digitalMachine?.defaultWasteSheets ?? 4;
+    // In nhanh KTS: KHÔNG BÙ HAO (in bao nhiêu tính tiền bấy nhiêu)
+    printWasteSheets = 0;
   }
 
   const totalPrintSheets = netPrintSheets + printWasteSheets + finishingWasteSheets;
   const cuts = Math.max(1, imposition.cutsPerParentSheet);
-  const parentSheetsNeeded = Math.ceil(totalPrintSheets / cuts);
+  const parentSheetsNeeded = (chosenTech === 'digital' && digitalMode === 'with_paper')
+    ? totalPrintSheets
+    : Math.ceil(totalPrintSheets / cuts);
   const ramsNeeded = Math.round((parentSheetsNeeded / 500) * 100) / 100;
 
   // Tính kg giấy = Số tờ lớn * Dài (m) * Rộng (m) * (gsm / 1000)
@@ -242,7 +250,9 @@ export function calculatePrintCost({
   // Nếu số tờ mẹ >= 500 (trên 1 ram) áp dụng giá sỉ nguyên ram, nếu < 500 tờ áp dụng giá lẻ dưới ram
   const isWholesale = parentSheetsNeeded >= 500;
   const effectiveRamPrice = isWholesale ? priceAbove500 : priceBelow500;
-  let paperCost = Math.round(parentSheetsNeeded * (effectiveRamPrice / 500));
+  let paperCost = (chosenTech === 'digital' && digitalMode === 'with_paper')
+    ? 0
+    : Math.round(parentSheetsNeeded * (effectiveRamPrice / 500));
 
   // 6. Tiền in ấn
   let plateCost = 0;
@@ -352,10 +362,22 @@ export function calculatePrintCost({
         ? digitalPricingKemGiay
         : DEFAULT_DIGITAL_KEM_GIAY;
 
-      // Tìm dòng giá phù hợp theo mã giấy
-      let matchedPricing = kemGiayList.find((kg) =>
-        paperType.code.toUpperCase().includes(kg.paperCode.toUpperCase())
-      );
+      // Nhận diện khổ in: nếu tờ in là 325x355 thì tìm mã tương ứng (F180_355 hoặc F230_355)
+      const isSheet355 = imposition.printSheet.widthMm <= 360 || imposition.printSheet.heightMm <= 360;
+
+      let matchedPricing: DigitalPrintKemGiay | undefined;
+
+      if (isSheet355) {
+        matchedPricing = kemGiayList.find((kg) =>
+          kg.sheetSize.includes('355') && paperType.code.toUpperCase().includes(kg.paperCode.replace('_355', '').toUpperCase())
+        );
+      }
+
+      if (!matchedPricing) {
+        matchedPricing = kemGiayList.find((kg) =>
+          !kg.sheetSize.includes('355') && paperType.code.toUpperCase().includes(kg.paperCode.toUpperCase())
+        );
+      }
 
       // Nếu không khớp chính xác mã, so khớp theo tiền tố chất liệu (C, I, F) + GSM gần nhất
       if (!matchedPricing) {
@@ -364,9 +386,11 @@ export function calculatePrintCost({
         if (pName.includes('ivory') || paperType.code.toUpperCase().startsWith('I')) prefix = 'I';
         else if (pName.includes('fort') || pName.includes('ford') || paperType.code.toUpperCase().startsWith('F')) prefix = 'F';
 
-        const sameType = kemGiayList.filter((kg) => kg.paperCode.startsWith(prefix));
-        if (sameType.length > 0) {
-          matchedPricing = sameType.reduce((prev, curr) =>
+        const sameType = kemGiayList.filter((kg) => kg.paperCode.startsWith(prefix) && (isSheet355 ? kg.sheetSize.includes('355') : !kg.sheetSize.includes('355')));
+        const pool = sameType.length > 0 ? sameType : kemGiayList.filter((kg) => kg.paperCode.startsWith(prefix));
+
+        if (pool.length > 0) {
+          matchedPricing = pool.reduce((prev, curr) =>
             Math.abs(curr.gsm - paperType.gsm) < Math.abs(prev.gsm - paperType.gsm) ? curr : prev
           );
         } else {
@@ -394,7 +418,7 @@ export function calculatePrintCost({
         sheetSizeName,
         ratePerSheet,
         shortRunFee,
-        note: `Bảng giá In Nhanh Kèm Giấy INTC (Đã gồm công in + giấy ${matchedPricing?.paperName || ''}). Phí SL ít: +${shortRunFee.toLocaleString('vi-VN')}đ`,
+        note: `In Nhanh Kèm Giấy INTC (Đã gồm công in + giấy ${matchedPricing?.paperName || ''}). Không bù hao: ${totalPrintSheets} tờ in. Phí SL ít: +${shortRunFee.toLocaleString('vi-VN')}đ`,
       };
     } else {
       // 2. In nhanh gia công (Konica C12000 / C12010S 5 màu - Trang 2 PDF)
@@ -620,15 +644,20 @@ function runQuickEstimate(
 
   const ups = Math.max(1, imposition.upsPerPrintSheet);
   const netSheets = Math.ceil(input.quantity / ups);
-  const printWaste = isDigital ? 4 : (offsetMachine?.defaultWasteSheets ?? 100);
-  const totalSheets = netSheets + printWaste + 10;
+  const printWaste = isDigital ? 0 : (offsetMachine?.defaultWasteSheets ?? 100);
+  const finishingWaste = isDigital ? 0 : 10;
+  const totalSheets = netSheets + printWaste + finishingWaste;
 
   const cuts = Math.max(1, imposition.cutsPerParentSheet);
-  const parentSheets = Math.ceil(totalSheets / cuts);
+  const parentSheets = (isDigital && digitalMode === 'with_paper')
+    ? totalSheets
+    : Math.ceil(totalSheets / cuts);
   const pAbove = paperType.priceAbove500 || paperType.pricePerRam;
   const pBelow = paperType.priceBelow500 || pAbove;
   const effectiveRamPrice = parentSheets >= 500 ? pAbove : pBelow;
-  let paperCost = Math.round(parentSheets * (effectiveRamPrice / 500));
+  let paperCost = (isDigital && digitalMode === 'with_paper')
+    ? 0
+    : Math.round(parentSheets * (effectiveRamPrice / 500));
 
   let printCost = 0;
   if (isDigital) {
@@ -638,9 +667,18 @@ function runQuickEstimate(
     else if (totalSheets < 100) shortFee = 20000;
 
     if (digitalMode === 'with_paper') {
-      const matched = digitalPricingKemGiay.find((kg) =>
-        paperType.code.toUpperCase().includes(kg.paperCode.toUpperCase())
-      ) || digitalPricingKemGiay[0];
+      const is355 = imposition.printSheet.heightMm <= 360;
+      let matched = digitalPricingKemGiay.find((kg) => {
+        if (is355 && (kg.paperCode === 'F180_355' || kg.paperCode === 'F230_355')) {
+          return paperType.code.toUpperCase().includes(kg.paperCode.toUpperCase());
+        }
+        return kg.paperCode.toUpperCase() === paperType.code.toUpperCase();
+      });
+      if (!matched) {
+        matched = digitalPricingKemGiay.find((kg) =>
+          paperType.code.toUpperCase().includes(kg.paperCode.toUpperCase())
+        ) || digitalPricingKemGiay[0];
+      }
       const rate = is2Sides ? matched.price2Side : matched.price1Side;
       printCost = Math.round(totalSheets * rate) + shortFee;
       paperCost = 0;

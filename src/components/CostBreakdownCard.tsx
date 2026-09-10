@@ -110,7 +110,9 @@ ${costs.finishingDetails.length > 0 ? `• Gia công: ${costs.finishingDetails.m
           <div className="py-2 flex justify-between items-center">
             <span className="flex items-center gap-1.5 text-slate-600">
               <Layers className="w-3.5 h-3.5 text-blue-600" />
-              Tiền giấy ({quantities.parentSheetsNeeded} tờ mẹ):
+              {chosenTech === 'digital' && costs.digitalDetails?.mode === 'with_paper'
+                ? `Phôi giấy INTC (${quantities.totalPrintSheets} tờ):`
+                : `Tiền giấy (${quantities.parentSheetsNeeded} tờ mẹ):`}
             </span>
             <span className="font-semibold text-slate-900">
               {costs.paperCost === 0 && costs.digitalDetails?.mode === 'with_paper' ? (
@@ -130,7 +132,9 @@ ${costs.finishingDetails.length > 0 ? `• Gia công: ${costs.finishingDetails.m
           <div className="py-2 flex justify-between items-center">
             <span className="flex items-center gap-1.5 text-slate-600">
               <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-              Tiền in {chosenTech === 'offset' ? (costs.plateCost === 0 ? '(Gói trọn gồm kẽm)' : `(${costs.platesCount} kẽm + công)`) : `(${costs.digitalDetails?.mode === 'with_paper' ? 'Kèm giấy INTC' : 'Gia công Konica'})`}:
+              {chosenTech === 'offset'
+                ? `Tiền in ${costs.plateCost === 0 ? '(Gói trọn gồm kẽm)' : `(${costs.platesCount} kẽm + công)`}:`
+                : `Tiền in (${quantities.totalPrintSheets} tờ, Không bù hao):`}
             </span>
             <span className="font-semibold text-slate-900">{costs.totalPrintCost.toLocaleString('vi-VN')}đ</span>
           </div>
@@ -146,7 +150,7 @@ ${costs.finishingDetails.length > 0 ? `• Gia công: ${costs.finishingDetails.m
                 <span className="text-sky-700">Khổ: {costs.digitalDetails.sheetSizeName || imposition.printSheet.name}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Đơn giá: {costs.digitalDetails.ratePerSheet.toLocaleString('vi-VN')}đ / tờ in</span>
+                <span>Đơn giá: {costs.digitalDetails.ratePerSheet.toLocaleString('vi-VN')}đ / tờ in ({quantities.totalPrintSheets} tờ)</span>
                 {costs.shortRunFee && costs.shortRunFee > 0 ? (
                   <span className="font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
                     Phụ phí SL ít: +{costs.shortRunFee.toLocaleString('vi-VN')}đ
@@ -154,6 +158,9 @@ ${costs.finishingDetails.length > 0 ? `• Gia công: ${costs.finishingDetails.m
                 ) : (
                   <span className="text-emerald-700 font-semibold">Miễn phụ phí</span>
                 )}
+              </div>
+              <div className="text-[10px] text-emerald-700 font-semibold pt-0.5 flex items-center gap-1">
+                <span>✓</span> In đúng {quantities.totalPrintSheets} tờ thực tế (Không bù hao)
               </div>
             </div>
           )}
