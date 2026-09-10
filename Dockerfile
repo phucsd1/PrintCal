@@ -1,6 +1,4 @@
-FROM node:24-alpine
-
-RUN apk add --no-cache libc6-compat
+FROM node:24-bookworm-slim
 
 WORKDIR /app
 
@@ -8,23 +6,21 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Create nextjs user UID 1000 for Hugging Face Spaces
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1000 nextjs
+# Setup UID 1000 for Hugging Face Spaces compatibility
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1000 -g nodejs nextjs
 
-COPY package.json package-lock.json ./
+COPY package*.json ./
 
-# Install all dependencies including devDependencies for build
-RUN npm ci
+# Use npm install to resolve platform-specific native binaries (swc-linux-x64-gnu)
+RUN npm install
 
 COPY . .
 
 RUN npm run build
 
-# Set production environment after build
 ENV NODE_ENV=production
 
-# Setup data directory permissions for nextjs user
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app
 
 USER nextjs
