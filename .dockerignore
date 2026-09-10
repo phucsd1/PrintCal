@@ -1,0 +1,8 @@
+node_modules
+.next
+.git
+.gitignore
+*.log
+data/*.db-wal
+data/*.db-shm
+data/*.db-journal
