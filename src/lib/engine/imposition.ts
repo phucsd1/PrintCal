@@ -51,7 +51,19 @@ export function calculateImposition({
       { name: 'Khổ A4 chuẩn (210 x 297 mm)', widthMm: 210, heightMm: 297, cutsFromParent: 8 },
     ];
   } else {
-    // In Offset: tính các phương án chia khổ giấy mẹ (chia 2, chia 4, chia 6, chia 8)
+    // In Offset: tính các phương án chia khổ giấy mẹ (chia 1, chia 2, chia 4, chia 8)
+    // Trường hợp 0: Khổ nguyên 65x86cm (Bắt nhíp chiều 86) - cho ấn phẩm khổ lớn
+    if (Math.max(parentW_mm, parentH_mm) <= 900) {
+      const fullW = Math.max(parentW_mm, parentH_mm); // chiều 860
+      const fullH = Math.min(parentW_mm, parentH_mm); // chiều 650
+      candidatePrintSheets.push({
+        name: `Khổ 65x86cm (Bắt nhíp chiều 86)`,
+        widthMm: fullW,
+        heightMm: fullH,
+        cutsFromParent: 1,
+      });
+    }
+
     // Trường hợp 1: Chia 4 (vd 65x86 -> 4 tờ 325 x 430 mm; 79x109 -> 4 tờ 395 x 545 mm)
     const cut4_w = Math.floor(parentW_mm / 2);
     const cut4_h = Math.floor(parentH_mm / 2);
@@ -62,15 +74,27 @@ export function calculateImposition({
       cutsFromParent: 4,
     });
 
-    // Trường hợp 2: Chia 2 (vd 79x109 -> 2 tờ 545 x 790 mm)
-    const cut2_w = Math.floor(parentW_mm / 2);
-    const cut2_h = parentH_mm;
+    // Trường hợp 2: Chia 2 (vd 65x86 -> 2 tờ 650 x 430 mm; 79x109 -> 2 tờ 545 x 790 mm)
+    // Cắt ngang
+    const cut2_1_w = parentW_mm;
+    const cut2_1_h = Math.floor(parentH_mm / 2);
     candidatePrintSheets.push({
-      name: `Khổ chia 2 (${cut2_w} x ${cut2_h} mm)`,
-      widthMm: cut2_w,
-      heightMm: cut2_h,
+      name: `Khổ chia 2 (${cut2_1_w} x ${cut2_1_h} mm)`,
+      widthMm: cut2_1_w,
+      heightMm: cut2_1_h,
       cutsFromParent: 2,
     });
+    // Cắt dọc
+    const cut2_2_w = Math.floor(parentW_mm / 2);
+    const cut2_2_h = parentH_mm;
+    if (cut2_2_w !== cut2_1_w || cut2_2_h !== cut2_1_h) {
+      candidatePrintSheets.push({
+        name: `Khổ chia 2 dọc (${cut2_2_w} x ${cut2_2_h} mm)`,
+        widthMm: cut2_2_w,
+        heightMm: cut2_2_h,
+        cutsFromParent: 2,
+      });
+    }
 
     // Trường hợp 3: Chia 8 (cho sp nhỏ namecard, thẻ tag)
     const cut8_w = Math.floor(parentW_mm / 2);

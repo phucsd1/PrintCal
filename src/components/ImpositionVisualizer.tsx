@@ -69,7 +69,7 @@ export const ImpositionVisualizer: React.FC<ImpositionVisualizerProps> = ({
             fontSize={Math.max(9, Math.min(14, svgWidth / 35))}
             fontWeight="bold"
           >
-            Lề kẹp nhíp ({gripperMarginMm}mm)
+            Lề kẹp nhíp ({gripperMarginMm}mm{printSheet.widthMm >= 800 ? ' • Bắt nhíp chiều 86' : ''})
           </text>
 
           {/* Các con sản phẩm */}

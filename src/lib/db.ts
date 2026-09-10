@@ -49,6 +49,8 @@ function initSchema(db: DatabaseSync) {
       step_cost REAL NOT NULL,
       default_waste_sheets INTEGER NOT NULL,
       gripper_margin_mm REAL NOT NULL DEFAULT 10,
+      base_impressions INTEGER NOT NULL DEFAULT 3000,
+      includes_plate INTEGER NOT NULL DEFAULT 1,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -138,6 +140,13 @@ function initSchema(db: DatabaseSync) {
       value TEXT NOT NULL
     );
   `);
+
+  try {
+    db.exec('ALTER TABLE offset_machines ADD COLUMN base_impressions INTEGER NOT NULL DEFAULT 3000;');
+  } catch {}
+  try {
+    db.exec('ALTER TABLE offset_machines ADD COLUMN includes_plate INTEGER NOT NULL DEFAULT 1;');
+  } catch {}
 
   // Seed default data if empty
   seedDefaultData(db);
@@ -1461,17 +1470,45 @@ function seedDefaultData(db: DatabaseSync) {
     }
   }
 
-  const offsetCount = db.prepare('SELECT COUNT(*) as cnt FROM offset_machines').get() as { cnt: number };
-  if (offsetCount.cnt === 0) {
+  const hasTargetOffset = db.prepare("SELECT COUNT(*) as cnt FROM offset_machines WHERE name LIKE '%dưới 65x43cm%'").get() as { cnt: number };
+  if (hasTargetOffset.cnt === 0) {
+    db.exec('DELETE FROM offset_machines;');
     const insertOffset = db.prepare(`
-      INSERT INTO offset_machines (name, max_width_mm, max_height_mm, min_width_mm, min_height_mm, plate_price, setup_cost, step_cost, default_waste_sheets, gripper_margin_mm)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO offset_machines (name, max_width_mm, max_height_mm, min_width_mm, min_height_mm, plate_price, setup_cost, step_cost, default_waste_sheets, gripper_margin_mm, base_impressions, includes_plate)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    // Common offset press formats in Vietnam
-    insertOffset.run('Máy Offset 4 màu Khổ 39x54 (1/4 khổ 79x109)', 540, 390, 210, 297, 75000, 450000, 160000, 80, 10);
-    insertOffset.run('Máy Offset 4 màu Khổ 54x79 (1/2 khổ 79x109)', 790, 540, 390, 540, 120000, 650000, 220000, 100, 10);
-    insertOffset.run('Máy Offset 4 màu Khổ 65x86 (Máy lớn)', 860, 650, 430, 650, 150000, 850000, 280000, 120, 12);
+    // Máy khổ nhỏ dưới 65x43cm: 900.000đ trọn gói <= 3000 lượt (đã gồm kẽm 4 màu)
+    insertOffset.run(
+      'Máy Offset Khổ Nhỏ (dưới 65x43cm)',
+      650,
+      430,
+      210,
+      297,
+      75000,
+      900000,
+      150000,
+      80,
+      10,
+      3000,
+      1
+    );
+
+    // Máy khổ 65x86cm bắt nhíp chiều 86: 1.200.000đ trọn gói <= 3000 lượt (đã gồm kẽm 4 màu)
+    insertOffset.run(
+      'Máy Offset Khổ 65x86cm (Bắt nhíp chiều 86)',
+      860,
+      650,
+      430,
+      650,
+      100000,
+      1200000,
+      200000,
+      100,
+      10,
+      3000,
+      1
+    );
   }
 
   const digitalCount = db.prepare('SELECT COUNT(*) as cnt FROM digital_machines').get() as { cnt: number };

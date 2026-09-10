@@ -25,10 +25,12 @@ export interface OffsetMachine {
   minWidthMm: number;
   minHeightMm: number;
   platePrice: number; // Giá kẽm CTP / lá
-  setupCost: number; // Phí mở máy in (<1000 lượt ép)
+  setupCost: number; // Phí mở máy in cơ bản (ví dụ dưới 3000 lượt ép)
   stepCost: number; // Đơn giá mỗi 1000 lượt tiếp theo
   defaultWasteSheets: number; // Bù hao canh màu chuẩn (ví dụ 100 tờ)
   gripperMarginMm: number; // Lề kẹp nhíp (10-12mm)
+  baseImpressions?: number; // Số lượt in cơ bản trong gói mở máy (mặc định 3000)
+  includesPlate?: boolean; // Đã bao gồm kẽm CTP trong phí mở máy
 }
 
 export interface DigitalMachine {

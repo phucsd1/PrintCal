@@ -118,7 +118,7 @@ ${costs.finishingDetails.length > 0 ? `• Gia công: ${costs.finishingDetails.m
           <div className="py-2 flex justify-between items-center">
             <span className="flex items-center gap-1.5 text-slate-600">
               <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-              Tiền in {chosenTech === 'offset' ? `(${costs.platesCount} kẽm + công)` : '(click in)'}:
+              Tiền in {chosenTech === 'offset' ? (costs.plateCost === 0 ? '(Gói trọn gồm kẽm)' : `(${costs.platesCount} kẽm + công)`) : '(click in)'}:
             </span>
             <span className="font-semibold text-slate-900">{costs.totalPrintCost.toLocaleString('vi-VN')}đ</span>
           </div>

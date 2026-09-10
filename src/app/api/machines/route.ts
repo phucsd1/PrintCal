@@ -20,6 +20,8 @@ export async function GET() {
       stepCost: r.step_cost as number,
       defaultWasteSheets: r.default_waste_sheets as number,
       gripperMarginMm: (r.gripper_margin_mm as number) || 10,
+      baseImpressions: (r.base_impressions as number) || 3000,
+      includesPlate: r.includes_plate !== 0,
     }));
 
     const digitalMachines: DigitalMachine[] = digitalRows.map((r) => ({
@@ -49,7 +51,7 @@ export async function PUT(req: NextRequest) {
     if (body.type === 'offset') {
       const stmt = db.prepare(`
         UPDATE offset_machines
-        SET name = ?, max_width_mm = ?, max_height_mm = ?, plate_price = ?, setup_cost = ?, step_cost = ?, default_waste_sheets = ?, gripper_margin_mm = ?, updated_at = CURRENT_TIMESTAMP
+        SET name = ?, max_width_mm = ?, max_height_mm = ?, plate_price = ?, setup_cost = ?, step_cost = ?, default_waste_sheets = ?, gripper_margin_mm = ?, base_impressions = ?, includes_plate = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
       stmt.run(
@@ -61,6 +63,8 @@ export async function PUT(req: NextRequest) {
         body.stepCost,
         body.defaultWasteSheets,
         body.gripperMarginMm || 10,
+        body.baseImpressions || 3000,
+        body.includesPlate ? 1 : 0,
         body.id
       );
     } else if (body.type === 'digital') {

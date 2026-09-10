@@ -14,14 +14,85 @@ interface CostCalculatorOptions {
   input: CalculationInput;
   paperType: PaperType;
   offsetMachine?: OffsetMachine;
+  allOffsetMachines?: OffsetMachine[];
   digitalMachine?: DigitalMachine;
   allFinishingServices: FinishingService[];
+}
+
+export function matchOffsetMachine(
+  printSheet: { widthMm: number; heightMm: number },
+  allMachines?: OffsetMachine[],
+  selectedMachineId?: number
+): OffsetMachine {
+  if (selectedMachineId && allMachines) {
+    const found = allMachines.find((m) => m.id === selectedMachineId);
+    if (found) return found;
+  }
+
+  const dimMin = Math.min(printSheet.widthMm, printSheet.heightMm);
+  const dimMax = Math.max(printSheet.widthMm, printSheet.heightMm);
+
+  if (allMachines && allMachines.length > 0) {
+    // Khổ nhỏ dưới 65x43cm (nếu vừa trong 650 x 430 mm)
+    if (dimMin <= 435 && dimMax <= 655) {
+      const small = allMachines.find(
+        (m) =>
+          m.name.toLowerCase().includes('nhỏ') ||
+          (m.maxWidthMm <= 655 && m.maxHeightMm <= 435) ||
+          (m.maxWidthMm <= 435 && m.maxHeightMm <= 655)
+      );
+      if (small) return small;
+    }
+    // Khổ 65x86cm bắt nhíp chiều 86
+    const large = allMachines.find(
+      (m) => m.name.includes('65x86') || m.maxWidthMm >= 800 || m.maxHeightMm >= 800
+    );
+    if (large) return large;
+
+    return allMachines[0];
+  }
+
+  // Fallback mặc định chuẩn theo yêu cầu xưởng in
+  if (dimMin <= 435 && dimMax <= 655) {
+    return {
+      id: 1,
+      name: 'Máy Offset Khổ Nhỏ (dưới 65x43cm)',
+      maxWidthMm: 650,
+      maxHeightMm: 430,
+      minWidthMm: 210,
+      minHeightMm: 297,
+      platePrice: 75000,
+      setupCost: 900000,
+      stepCost: 150000,
+      defaultWasteSheets: 80,
+      gripperMarginMm: 10,
+      baseImpressions: 3000,
+      includesPlate: true,
+    };
+  } else {
+    return {
+      id: 2,
+      name: 'Máy Offset Khổ 65x86cm (Bắt nhíp chiều 86)',
+      maxWidthMm: 860,
+      maxHeightMm: 650,
+      minWidthMm: 430,
+      minHeightMm: 650,
+      platePrice: 100000,
+      setupCost: 1200000,
+      stepCost: 200000,
+      defaultWasteSheets: 100,
+      gripperMarginMm: 10,
+      baseImpressions: 3000,
+      includesPlate: true,
+    };
+  }
 }
 
 export function calculatePrintCost({
   input,
   paperType,
   offsetMachine,
+  allOffsetMachines,
   digitalMachine,
   allFinishingServices,
 }: CostCalculatorOptions): CalculationResult {
@@ -146,54 +217,76 @@ export function calculatePrintCost({
   let printRunCost = 0;
 
   if (chosenTech === 'offset') {
-    const machine = offsetMachine || {
-      platePrice: 80000,
-      setupCost: 450000,
-      stepCost: 160000,
-    };
+    const machine = offsetMachine || matchOffsetMachine(imposition.printSheet, allOffsetMachines, input.offsetMachineId);
 
     const is2Sides = input.printSides === '2_side';
     const workType = input.offsetWorkType || 'self_turn';
+    const baseImpressions = machine.baseImpressions || 3000;
+    const includesPlate = machine.includesPlate ?? true;
 
     if (!is2Sides) {
-      // In 1 mặt: 1 bộ kẽm
-      platesCount = input.colorsFront || 4;
-      plateCost = platesCount * machine.platePrice;
+      // In 1 mặt: 1 ca máy, 1 bộ kẽm (chuẩn 4 màu)
+      const colors = input.colorsFront || 4;
+      platesCount = colors;
+
+      if (includesPlate) {
+        // Gói mở máy đã bao gồm kẽm 4 màu, chỉ tính thêm tiền kẽm nếu khách in màu thứ 5+
+        const extraColors = Math.max(0, colors - 4);
+        plateCost = extraColors * machine.platePrice;
+      } else {
+        plateCost = platesCount * machine.platePrice;
+      }
 
       const impressions = totalPrintSheets;
-      if (impressions <= 1000) {
+      if (impressions <= baseImpressions) {
         printRunCost = machine.setupCost;
       } else {
-        const extraThousands = Math.ceil((impressions - 1000) / 1000);
+        const extraThousands = Math.ceil((impressions - baseImpressions) / 1000);
         printRunCost = machine.setupCost + extraThousands * machine.stepCost;
       }
     } else {
       // In 2 mặt
       if (workType === 'sheetwise') {
-        // 2 bộ kẽm riêng biệt
-        platesCount = (input.colorsFront || 4) + (input.colorsBack || 4);
-        plateCost = platesCount * machine.platePrice;
+        // In 2 bài riêng: 2 ca in độc lập, 2 bộ kẽm
+        const colorsF = input.colorsFront || 4;
+        const colorsB = input.colorsBack || 4;
+        platesCount = colorsF + colorsB;
+
+        if (includesPlate) {
+          const extraColorsF = Math.max(0, colorsF - 4);
+          const extraColorsB = Math.max(0, colorsB - 4);
+          plateCost = (extraColorsF + extraColorsB) * machine.platePrice;
+        } else {
+          plateCost = platesCount * machine.platePrice;
+        }
 
         // 2 ca in độc lập
         const impressionsPerSide = totalPrintSheets;
-        const costSide1 = impressionsPerSide <= 1000
+        const costSide1 = impressionsPerSide <= baseImpressions
           ? machine.setupCost
-          : machine.setupCost + Math.ceil((impressionsPerSide - 1000) / 1000) * machine.stepCost;
-        const costSide2 = impressionsPerSide <= 1000
+          : machine.setupCost + Math.ceil((impressionsPerSide - baseImpressions) / 1000) * machine.stepCost;
+        const costSide2 = impressionsPerSide <= baseImpressions
           ? machine.setupCost
-          : machine.setupCost + Math.ceil((impressionsPerSide - 1000) / 1000) * machine.stepCost;
+          : machine.setupCost + Math.ceil((impressionsPerSide - baseImpressions) / 1000) * machine.stepCost;
         printRunCost = costSide1 + costSide2;
       } else {
-        // Tự trở (Work & Turn) hoặc Trở nhíp (Tumble): Dùng 1 bộ kẽm ghép cả 2 mặt
-        platesCount = Math.max(input.colorsFront || 4, input.colorsBack || 4);
-        plateCost = platesCount * machine.platePrice;
+        // Tự trở (Work & Turn) hoặc Trở nhíp (Tumble): Dùng chung 1 bộ kẽm ghép cả 2 mặt (1 ca máy)
+        const colors = Math.max(input.colorsFront || 4, input.colorsBack || 4);
+        platesCount = colors;
+
+        if (includesPlate) {
+          const extraColors = Math.max(0, colors - 4);
+          plateCost = extraColors * machine.platePrice;
+        } else {
+          plateCost = platesCount * machine.platePrice;
+        }
 
         // Chạy 2 lượt in (lượt ép x 2)
         const totalImpressions = totalPrintSheets * 2;
-        if (totalImpressions <= 1000) {
+        if (totalImpressions <= baseImpressions) {
           printRunCost = machine.setupCost;
         } else {
-          const extraThousands = Math.ceil((totalImpressions - 1000) / 1000);
+          const extraThousands = Math.ceil((totalImpressions - baseImpressions) / 1000);
           printRunCost = machine.setupCost + extraThousands * machine.stepCost;
         }
       }
@@ -380,13 +473,14 @@ function runQuickEstimate(
       : (input.printSides === '2_side' ? 2200 : 1200);
     printCost = Math.max(20000, totalSheets * rate);
   } else {
-    const machine = offsetMachine || { platePrice: 80000, setupCost: 450000, stepCost: 160000 };
-    const plates = input.printSides === '2_side' ? 4 : 4; // giả định tự trở
-    const platePrice = plates * machine.platePrice;
+    const machine = offsetMachine || matchOffsetMachine(imposition.printSheet);
+    const baseImpressions = machine.baseImpressions || 3000;
+    const includesPlate = machine.includesPlate ?? true;
+    const platePrice = includesPlate ? 0 : 4 * machine.platePrice;
     const impressions = input.printSides === '2_side' ? totalSheets * 2 : totalSheets;
-    const runPrice = impressions <= 1000
+    const runPrice = impressions <= baseImpressions
       ? machine.setupCost
-      : machine.setupCost + Math.ceil((impressions - 1000) / 1000) * machine.stepCost;
+      : machine.setupCost + Math.ceil((impressions - baseImpressions) / 1000) * machine.stepCost;
     printCost = platePrice + runPrice;
   }
 

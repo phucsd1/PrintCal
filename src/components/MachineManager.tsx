@@ -133,7 +133,7 @@ export const MachineManager: React.FC = () => {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Mở máy (&le;1000 lượt):</span>
+                    <span className="text-slate-500">Mở máy (&le;{current.baseImpressions || 3000} lượt):</span>
                     {isEditing ? (
                       <input
                         type="number"
@@ -142,7 +142,42 @@ export const MachineManager: React.FC = () => {
                         onChange={(e) => setEditingOffset({ ...current, setupCost: Number(e.target.value) })}
                       />
                     ) : (
-                      <span className="font-bold text-slate-800">{current.setupCost.toLocaleString('vi-VN')}đ</span>
+                      <div className="text-right">
+                        <span className="font-bold text-slate-800">{current.setupCost.toLocaleString('vi-VN')}đ</span>
+                        {current.includesPlate && (
+                          <span className="text-[10px] font-semibold text-emerald-600 block">Đã gồm kẽm</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Số lượt in cơ bản:</span>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        className="w-28 p-1 border rounded text-right"
+                        value={current.baseImpressions || 3000}
+                        onChange={(e) => setEditingOffset({ ...current, baseImpressions: Number(e.target.value) })}
+                      />
+                    ) : (
+                      <span className="font-medium text-slate-700">{(current.baseImpressions || 3000).toLocaleString('vi-VN')} lượt</span>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Bao gồm kẽm CTP:</span>
+                    {isEditing ? (
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 text-indigo-600 rounded"
+                        checked={current.includesPlate ?? true}
+                        onChange={(e) => setEditingOffset({ ...current, includesPlate: e.target.checked })}
+                      />
+                    ) : (
+                      <span className={`font-semibold ${current.includesPlate ? 'text-emerald-600' : 'text-slate-500'}`}>
+                        {current.includesPlate ? 'Đã gồm trong giá mở máy' : 'Tính riêng theo kẽm'}
+                      </span>
                     )}
                   </div>
 

@@ -37,16 +37,11 @@ export async function POST(req: NextRequest) {
     };
 
     // Lấy thông số máy in offset
+    const offsetRows = db.prepare('SELECT * FROM offset_machines ORDER BY id ASC').all() as Record<string, unknown>[];
+    const allOffsetMachines = offsetRows.map(mapOffsetMachine);
     let offsetMachine: OffsetMachine | undefined;
     if (input.offsetMachineId) {
-      const row = db.prepare('SELECT * FROM offset_machines WHERE id = ?').get(input.offsetMachineId) as Record<string, unknown> | undefined;
-      if (row) {
-        offsetMachine = mapOffsetMachine(row);
-      }
-    }
-    if (!offsetMachine) {
-      const row = db.prepare('SELECT * FROM offset_machines ORDER BY id ASC LIMIT 1').get() as Record<string, unknown> | undefined;
-      if (row) offsetMachine = mapOffsetMachine(row);
+      offsetMachine = allOffsetMachines.find((m) => m.id === input.offsetMachineId);
     }
 
     // Lấy thông số máy in nhanh
@@ -124,6 +119,7 @@ export async function POST(req: NextRequest) {
       input: sanitizedInput,
       paperType,
       offsetMachine,
+      allOffsetMachines,
       digitalMachine,
       allFinishingServices,
     });
@@ -148,6 +144,8 @@ function mapOffsetMachine(r: Record<string, unknown>): OffsetMachine {
     stepCost: r.step_cost as number,
     defaultWasteSheets: r.default_waste_sheets as number,
     gripperMarginMm: (r.gripper_margin_mm as number) || 10,
+    baseImpressions: (r.base_impressions as number) || 3000,
+    includesPlate: r.includes_plate !== 0,
   };
 }
 
