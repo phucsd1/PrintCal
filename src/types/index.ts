@@ -101,11 +101,46 @@ export interface CalculationInput {
   vatPercent?: number;
 }
 
+export interface PaperCutLine {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  type: 'vertical' | 'horizontal';
+  label?: string;
+}
+
+export interface PaperCutBlock {
+  index: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  name: string;
+}
+
+export interface PaperCutScheme {
+  parentWidthMm: number;
+  parentHeightMm: number;
+  cutType: 'chia_1' | 'chia_2' | 'chia_4' | 'chia_6' | 'chia_8' | 'custom';
+  cutDescription: string;
+  cutsCount: number;
+  cutSheetWidthMm: number;
+  cutSheetHeightMm: number;
+  blocks: PaperCutBlock[];
+  wasteAreaPercent: number;
+  cutLines?: PaperCutLine[];
+}
+
 export interface BoxCoordinate {
   x: number;
   y: number;
   w: number;
   h: number;
+  trimW?: number;
+  trimH?: number;
+  bleedMm?: number;
+  isRotated?: boolean;
   index: number;
 }
 
@@ -131,6 +166,7 @@ export interface ImpositionResult {
   isRotated: boolean;
   boxes: BoxCoordinate[];
   sheetEfficiencyPercent: number;
+  cutScheme?: PaperCutScheme;
 }
 
 export interface FinishingCostDetail {

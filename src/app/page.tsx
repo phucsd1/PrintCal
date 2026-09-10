@@ -724,7 +724,7 @@ export default function HomePage() {
                           }`}
                         >
                           <LayoutGrid className="w-3.5 h-3.5" />
-                          Sơ Đồ Cắt Giấy 2D
+                          Sơ Đồ Bình Bài & Cắt Giấy
                         </button>
 
                         <button
