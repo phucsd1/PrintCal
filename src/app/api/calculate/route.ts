@@ -9,7 +9,15 @@ export async function POST(req: NextRequest) {
     const db = getDb();
 
     // Lấy thông tin giấy
-    const paperRow = db.prepare('SELECT * FROM paper_types WHERE id = ?').get(input.paperTypeId) as Record<string, unknown> | undefined;
+    let paperRow: Record<string, unknown> | undefined;
+    if (input.paperTypeId) {
+      paperRow = db.prepare('SELECT * FROM paper_types WHERE id = ?').get(input.paperTypeId) as Record<string, unknown> | undefined;
+    } else if ((input as unknown as Record<string, unknown>).paperCode) {
+      paperRow = db.prepare('SELECT * FROM paper_types WHERE code = ?').get((input as unknown as Record<string, unknown>).paperCode as string) as Record<string, unknown> | undefined;
+    } else {
+      paperRow = db.prepare('SELECT * FROM paper_types WHERE is_active = 1 LIMIT 1').get() as Record<string, unknown> | undefined;
+    }
+
     if (!paperRow) {
       return NextResponse.json({ error: 'Không tìm thấy loại giấy yêu cầu' }, { status: 400 });
     }
@@ -70,8 +78,50 @@ export async function POST(req: NextRequest) {
       isActive: Boolean(r.is_active),
     }));
 
+    // Chuẩn hóa danh sách gia công đã chọn
+    const rawFinishing = Array.isArray(input.selectedFinishing) ? input.selectedFinishing : [];
+    const sanitizedFinishing = rawFinishing
+      .map((sel) => {
+        let sid = sel.serviceId;
+        if (!sid && (sel as unknown as { code?: string }).code) {
+          const match = allFinishingServices.find((s) => s.code === (sel as unknown as { code?: string }).code);
+          if (match) sid = match.id;
+        }
+        return {
+          serviceId: sid,
+          sides: (Number((sel as unknown as { side?: number | string }).side) || sel.sides || 1) as 1 | 2,
+          customQuantity: sel.customQuantity,
+          foilAreaCm2: sel.foilAreaCm2,
+          customNote: sel.customNote,
+        };
+      })
+      .filter((s) => s.serviceId && s.serviceId > 0);
+
+    const rawBody = input as unknown as Record<string, unknown>;
+    const sanitizedInput: CalculationInput = {
+      jobName: (rawBody.jobName as string) || 'Tính giá in',
+      productType: (rawBody.productType as CalculationInput['productType']) || 'to_roi',
+      printTech: (rawBody.printTech as CalculationInput['printTech']) || 'auto',
+      quantity: Number(rawBody.quantity) || 1000,
+      widthMm: Number(rawBody.widthMm ?? rawBody.productWidth) || 148,
+      heightMm: Number(rawBody.heightMm ?? rawBody.productHeight) || 210,
+      pages: Number(rawBody.pages) || 2,
+      bleedMm: typeof rawBody.bleedMm === 'number' ? rawBody.bleedMm : 2,
+      paperTypeId: paperType.id,
+      printSides: (rawBody.printSides as CalculationInput['printSides']) || '2_side',
+      colorsFront: Number(rawBody.colorsFront) || 4,
+      colorsBack: rawBody.printSides === '1_side' ? 0 : (Number(rawBody.colorsBack) || 4),
+      offsetWorkType: (rawBody.offsetWorkType as CalculationInput['offsetWorkType']) || 'self_turn',
+      offsetMachineId: rawBody.offsetMachineId ? Number(rawBody.offsetMachineId) : undefined,
+      digitalMachineId: rawBody.digitalMachineId ? Number(rawBody.digitalMachineId) : undefined,
+      selectedFinishing: sanitizedFinishing,
+      profitMarginPercent: Number(rawBody.profitMarginPercent) || 0,
+      discountAmount: Number(rawBody.discountAmount) || 0,
+      vatPercent: Number(rawBody.vatPercent) || 0,
+    };
+
     const result = calculatePrintCost({
-      input,
+      input: sanitizedInput,
       paperType,
       offsetMachine,
       digitalMachine,

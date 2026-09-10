@@ -59,7 +59,7 @@ export function calculatePrintCost({
   let totalFinishingWastePercent = 0;
   const activeFinishingDetails: FinishingCostDetail[] = [];
 
-  for (const sel of input.selectedFinishing) {
+  for (const sel of (input.selectedFinishing || [])) {
     const service = allFinishingServices.find((s) => s.id === sel.serviceId);
     if (!service) continue;
 
@@ -392,7 +392,7 @@ function runQuickEstimate(
 
   // Ước tính gia công cơ bản
   let finishingCost = 0;
-  for (const sel of input.selectedFinishing) {
+  for (const sel of (input.selectedFinishing || [])) {
     const service = allFinishingServices.find((s) => s.id === sel.serviceId);
     if (service) {
       if (service.calcType === 'per_m2') {
