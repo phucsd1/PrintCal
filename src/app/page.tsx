@@ -346,6 +346,34 @@ export default function HomePage() {
     return papers.find((p) => p.id === paperTypeId) || papers[0];
   }, [papers, paperTypeId]);
 
+  const groupedPapers = useMemo(() => {
+    const groups: Record<string, PaperType[]> = {
+      'Giấy Couche (C)': [],
+      'Giấy Ivory (I)': [],
+      'Giấy Fort / Ford (F)': [],
+      'Giấy Bristol (B)': [],
+      'Giấy Duplex (D)': [],
+      'Giấy Decal & Khác': [],
+    };
+
+    for (const p of papers) {
+      if (p.name.startsWith('Couche') || p.code.startsWith('C')) {
+        groups['Giấy Couche (C)'].push(p);
+      } else if (p.name.startsWith('Ivory') || p.code.startsWith('I')) {
+        groups['Giấy Ivory (I)'].push(p);
+      } else if (p.name.startsWith('Fort') || p.name.startsWith('Ford') || p.code.startsWith('F')) {
+        groups['Giấy Fort / Ford (F)'].push(p);
+      } else if (p.name.startsWith('Bristol') || p.code.startsWith('B')) {
+        groups['Giấy Bristol (B)'].push(p);
+      } else if (p.name.startsWith('Duplex') || p.code.startsWith('D')) {
+        groups['Giấy Duplex (D)'].push(p);
+      } else {
+        groups['Giấy Decal & Khác'].push(p);
+      }
+    }
+    return groups;
+  }, [papers]);
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} orderCount={orderCount} />
@@ -444,11 +472,17 @@ export default function HomePage() {
                         onChange={(e) => setPaperTypeId(Number(e.target.value))}
                         className="w-full border border-slate-300 rounded-lg p-2.5 bg-white font-medium text-slate-800 text-xs"
                       >
-                        {papers.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({p.parentWidthCm}×{p.parentHeightCm}cm) — {p.pricePerRam > 0 ? `${p.pricePerRam.toLocaleString('vi-VN')}đ/ram` : `${p.pricePerKg.toLocaleString('vi-VN')}đ/kg`}
-                          </option>
-                        ))}
+                        {Object.entries(groupedPapers).map(([groupName, groupItems]) =>
+                          groupItems.length > 0 ? (
+                            <optgroup key={groupName} label={groupName}>
+                              {groupItems.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name} — {p.pricePerRam > 0 ? `${p.pricePerRam.toLocaleString('vi-VN')}đ/ram` : `${p.pricePerKg.toLocaleString('vi-VN')}đ/kg`}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ) : null
+                        )}
                       </select>
                     </div>
 
