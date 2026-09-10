@@ -1,4 +1,4 @@
-import { BoxCoordinate, ImpositionResult, PaperCutBlock, PaperCutLine, PaperCutScheme, PaperType, PrintTech } from '@/types';
+import { BoxCoordinate, DigitalMode, ImpositionResult, PaperCutBlock, PaperCutLine, PaperCutScheme, PaperType, PrintTech } from '@/types';
 
 interface ImpositionOptions {
   widthMm: number;
@@ -6,6 +6,7 @@ interface ImpositionOptions {
   bleedMm?: number;
   paperType: PaperType;
   printTech: PrintTech;
+  digitalMode?: DigitalMode;
   preferredMachineSheet?: { widthMm: number; heightMm: number; name: string };
   gripperMarginMm?: number;
 }
@@ -25,6 +26,7 @@ export function calculateImposition({
   bleedMm = 2,
   paperType,
   printTech,
+  digitalMode = 'with_paper',
   preferredMachineSheet,
   gripperMarginMm = 10,
 }: ImpositionOptions): ImpositionResult {
@@ -47,12 +49,26 @@ export function calculateImposition({
       gripperMarginMm,
     });
   } else if (printTech === 'digital') {
-    // In nhanh KTS: các khổ in máy tiêu chuẩn A3+, A3, A4
-    const digitalCandidates = [
-      { name: 'Khổ A3+ (330 x 488 mm)', w: 488, h: 330, cuts: 4 },
-      { name: 'Khổ A3 chuẩn (297 x 420 mm)', w: 420, h: 297, cuts: 4 },
-      { name: 'Khổ A4 chuẩn (210 x 297 mm)', w: 297, h: 210, cuts: 8 },
-    ];
+    // In nhanh KTS: Theo chuẩn Bảng Giá In Nhanh Kèm Giấy & In Gia Công Konica C12000
+    let digitalCandidates: { name: string; w: number; h: number; cuts: number }[] = [];
+
+    if (digitalMode === 'with_paper') {
+      // BẢNG GIÁ IN NHANH KÈM GIẤY: Khổ 325 x 430 mm (chính) & 325 x 355 mm (Fort)
+      digitalCandidates = [
+        { name: 'Khổ in kèm giấy (325 x 430 mm)', w: 430, h: 325, cuts: 4 },
+        { name: 'Khổ in kèm giấy đứng (325 x 430 mm)', w: 325, h: 430, cuts: 4 },
+        { name: 'Khổ in kèm giấy (325 x 355 mm)', w: 355, h: 325, cuts: 4 },
+      ];
+    } else {
+      // BẢNG GIÁ IN GIA CÔNG KONICA C12000 / C12010S: 5 khổ in máy
+      digitalCandidates = [
+        { name: 'Khổ Konica A3+ (330 x 483 mm)', w: 483, h: 330, cuts: 4 },
+        { name: 'Khổ Konica A3 chuẩn (297 x 420 mm)', w: 420, h: 297, cuts: 4 },
+        { name: 'Khổ Konica 330 x 355 mm', w: 355, h: 330, cuts: 4 },
+        { name: 'Khổ Konica A4 chuẩn (210 x 297 mm)', w: 297, h: 210, cuts: 8 },
+        { name: 'Khổ Konica Banner (330 x 1200 mm)', w: 1200, h: 330, cuts: 1 },
+      ];
+    }
 
     for (const dc of digitalCandidates) {
       const cuts = calculateCutsFromParent(parentW, parentH, dc.w, dc.h);
@@ -63,7 +79,7 @@ export function calculateImposition({
         sheetHeightMm: dc.h,
         cutsFromParent: cuts,
         cutScheme,
-        gripperMarginMm: 5,
+        gripperMarginMm: 4,
       });
     }
   } else {

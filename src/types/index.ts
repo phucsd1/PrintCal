@@ -36,6 +36,35 @@ export interface OffsetMachine {
   includesPlate?: boolean; // Đã bao gồm kẽm CTP trong phí mở máy
 }
 
+export type DigitalMode = 'with_paper' | 'without_paper'; // In nhanh kèm giấy hoặc In gia công không kèm giấy
+
+export interface DigitalPrintGiaCong {
+  id: number;
+  machineName: string;
+  sheetSize: string; // 'A4' | '330x355' | 'A3' | '330x483' | '330x1200'
+  widthMm: number;
+  heightMm: number;
+  paperLt249: number; // Giấy (<249gsm)
+  paper250To349: number; // Giấy (250gsm - 349gsm)
+  paper350To450: number; // Giấy (350gsm - 450gsm)
+  decalPaperPlastic: number; // Decal (giấy - nhựa)
+  decalClear: number; // Decal trong
+  syntheticPaper: number; // Giấy nhựa (<280gsm)
+  pvcPlastic: number; // Nhựa PVC
+}
+
+export interface DigitalPrintKemGiay {
+  id: number;
+  paperCode: string;
+  paperName: string;
+  gsm: number;
+  sheetSize: string; // '325x430' | '325x355'
+  widthMm: number;
+  heightMm: number;
+  price1Side: number; // In 1 mặt + giấy
+  price2Side: number; // In 2 mặt + giấy
+}
+
 export interface DigitalMachine {
   id: number;
   name: string;
@@ -98,6 +127,9 @@ export interface CalculationInput {
   offsetWorkType?: OffsetWorkType;
   offsetMachineId?: number;
   digitalMachineId?: number;
+  digitalMode?: DigitalMode; // 'with_paper' (Kèm giấy xưởng) | 'without_paper' (In gia công Konica)
+  customerSuppliedPaper?: boolean; // Nếu in gia công mà khách mang giấy đến -> tiền giấy = 0
+  whiteInk?: boolean; // Tùy chọn in mực trắng (Konica C12000)
   selectedFinishing: SelectedFinishing[];
   profitMarginPercent: number;
   discountAmount?: number;
@@ -221,6 +253,16 @@ export interface CalculationResult {
     vatAmount: number;
     finalPrice: number;
     unitPrice: number;
+    shortRunFee?: number; // Phí số lượng ít (<50 tờ: +30k, <100 tờ: +20k)
+    digitalDetails?: {
+      mode: DigitalMode;
+      machineName?: string;
+      sheetSizeName?: string;
+      ratePerSheet: number;
+      shortRunFee: number;
+      whiteInkCost?: number;
+      note?: string;
+    };
   };
   chosenTech: 'offset' | 'digital';
   recommendation?: {

@@ -45,3 +45,6 @@ data/*.db-wal
 data/*.db-shm
 data/*.db-journal
 
+# extracted images
+scripts/extracted_images/
+

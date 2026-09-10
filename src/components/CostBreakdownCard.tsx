@@ -112,16 +112,51 @@ ${costs.finishingDetails.length > 0 ? `• Gia công: ${costs.finishingDetails.m
               <Layers className="w-3.5 h-3.5 text-blue-600" />
               Tiền giấy ({quantities.parentSheetsNeeded} tờ mẹ):
             </span>
-            <span className="font-semibold text-slate-900">{costs.paperCost.toLocaleString('vi-VN')}đ</span>
+            <span className="font-semibold text-slate-900">
+              {costs.paperCost === 0 && costs.digitalDetails?.mode === 'with_paper' ? (
+                <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded">
+                  Đã gồm trong giá in
+                </span>
+              ) : costs.paperCost === 0 && input.customerSuppliedPaper ? (
+                <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded">
+                  Khách tự cấp giấy
+                </span>
+              ) : (
+                `${costs.paperCost.toLocaleString('vi-VN')}đ`
+              )}
+            </span>
           </div>
 
           <div className="py-2 flex justify-between items-center">
             <span className="flex items-center gap-1.5 text-slate-600">
               <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-              Tiền in {chosenTech === 'offset' ? (costs.plateCost === 0 ? '(Gói trọn gồm kẽm)' : `(${costs.platesCount} kẽm + công)`) : '(click in)'}:
+              Tiền in {chosenTech === 'offset' ? (costs.plateCost === 0 ? '(Gói trọn gồm kẽm)' : `(${costs.platesCount} kẽm + công)`) : `(${costs.digitalDetails?.mode === 'with_paper' ? 'Kèm giấy INTC' : 'Gia công Konica'})`}:
             </span>
             <span className="font-semibold text-slate-900">{costs.totalPrintCost.toLocaleString('vi-VN')}đ</span>
           </div>
+
+          {chosenTech === 'digital' && costs.digitalDetails && (
+            <div className="py-2 px-3 bg-sky-50/80 border border-sky-100 rounded-xl text-[11px] text-sky-900 space-y-1 my-1">
+              <div className="flex justify-between font-bold">
+                <span>
+                  {costs.digitalDetails.mode === 'with_paper'
+                    ? '📦 In kèm giấy (INTC 14.03)'
+                    : '⚙️ In gia công (Konica C12000)'}
+                </span>
+                <span className="text-sky-700">Khổ: {costs.digitalDetails.sheetSizeName || imposition.printSheet.name}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Đơn giá: {costs.digitalDetails.ratePerSheet.toLocaleString('vi-VN')}đ / tờ in</span>
+                {costs.shortRunFee && costs.shortRunFee > 0 ? (
+                  <span className="font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
+                    Phụ phí SL ít: +{costs.shortRunFee.toLocaleString('vi-VN')}đ
+                  </span>
+                ) : (
+                  <span className="text-emerald-700 font-semibold">Miễn phụ phí</span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="py-2 flex justify-between items-center">
             <span className="flex items-center gap-1.5 text-slate-600">

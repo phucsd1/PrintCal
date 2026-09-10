@@ -1,0 +1,162 @@
+[
+  {
+    "paper_code": "C100",
+    "paper_name": "Couche 100gsm",
+    "gsm": 100,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 1600,
+    "price_2side": 2800
+  },
+  {
+    "paper_code": "C120",
+    "paper_name": "Couche 120gsm",
+    "gsm": 120,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 1700,
+    "price_2side": 2900
+  },
+  {
+    "paper_code": "C150",
+    "paper_name": "Couche 150gsm",
+    "gsm": 150,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 1800,
+    "price_2side": 3000
+  },
+  {
+    "paper_code": "C200",
+    "paper_name": "Couche 200gsm",
+    "gsm": 200,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 1900,
+    "price_2side": 3100
+  },
+  {
+    "paper_code": "C250",
+    "paper_name": "Couche 250gsm",
+    "gsm": 250,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 2100,
+    "price_2side": 3300
+  },
+  {
+    "paper_code": "C300",
+    "paper_name": "Couche 300gsm",
+    "gsm": 300,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 2700,
+    "price_2side": 4300
+  },
+  {
+    "paper_code": "I250",
+    "paper_name": "Ivory 250gsm",
+    "gsm": 250,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 2100,
+    "price_2side": 3300
+  },
+  {
+    "paper_code": "I300",
+    "paper_name": "Ivory 300gsm",
+    "gsm": 300,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 2600,
+    "price_2side": 4200
+  },
+  {
+    "paper_code": "I350",
+    "paper_name": "Ivory 350gsm",
+    "gsm": 350,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 3300,
+    "price_2side": 5300
+  },
+  {
+    "paper_code": "F100",
+    "paper_name": "Fort 100gsm",
+    "gsm": 100,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 1600,
+    "price_2side": 2800
+  },
+  {
+    "paper_code": "F120",
+    "paper_name": "Fort 120gsm",
+    "gsm": 120,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 1700,
+    "price_2side": 2900
+  },
+  {
+    "paper_code": "F180",
+    "paper_name": "Fort 180gsm",
+    "gsm": 180,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 1900,
+    "price_2side": 3100
+  },
+  {
+    "paper_code": "F230",
+    "paper_name": "Fort 230gsm",
+    "gsm": 230,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 2100,
+    "price_2side": 3300
+  },
+  {
+    "paper_code": "F250",
+    "paper_name": "Fort 250gsm",
+    "gsm": 250,
+    "sheet_size": "325x430",
+    "width_mm": 325,
+    "height_mm": 430,
+    "price_1side": 2300,
+    "price_2side": 3500
+  },
+  {
+    "paper_code": "F180_355",
+    "paper_name": "Fort 180gsm (325x355)",
+    "gsm": 180,
+    "sheet_size": "325x355",
+    "width_mm": 325,
+    "height_mm": 355,
+    "price_1side": 1400,
+    "price_2side": 2200
+  },
+  {
+    "paper_code": "F230_355",
+    "paper_name": "Fort 230gsm (325x355)",
+    "gsm": 230,
+    "sheet_size": "325x355",
+    "width_mm": 325,
+    "height_mm": 355,
+    "price_1side": 1500,
+    "price_2side": 2300
+  }
+]

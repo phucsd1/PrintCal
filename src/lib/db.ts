@@ -71,6 +71,35 @@ function initSchema(db: DatabaseSync) {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS digital_pricing_giacong (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      machine_name TEXT NOT NULL,
+      sheet_size TEXT NOT NULL UNIQUE,
+      width_mm REAL NOT NULL,
+      height_mm REAL NOT NULL,
+      paper_lt_249 REAL NOT NULL,
+      paper_250_349 REAL NOT NULL,
+      paper_350_450 REAL NOT NULL,
+      decal_paper_plastic REAL NOT NULL,
+      decal_clear REAL NOT NULL,
+      synthetic_paper REAL NOT NULL,
+      pvc_plastic REAL NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS digital_pricing_kem_giay (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      paper_code TEXT NOT NULL UNIQUE,
+      paper_name TEXT NOT NULL,
+      gsm INTEGER NOT NULL,
+      sheet_size TEXT NOT NULL,
+      width_mm REAL NOT NULL,
+      height_mm REAL NOT NULL,
+      price_1side REAL NOT NULL,
+      price_2side REAL NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS finishing_services (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code TEXT NOT NULL UNIQUE,
@@ -256,8 +285,55 @@ function seedDefaultData(db: DatabaseSync) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    insertDigital.run('Máy In Nhanh KTS Konica / Ricoh Pro (Khổ A3+ 33x48)', 488, 330, 1200, 2200, 2400, 4200, 3, 20000);
+    insertDigital.run('Máy In Nhanh Konica C12000 / C12010S (5 Màu - Khổ 33x48)', 488, 330, 800, 1600, 2000, 4000, 3, 20000);
     insertDigital.run('Máy In Nhanh Fuji Xerox Versant 3100 (Cao Cấp)', 660, 330, 1500, 2800, 3000, 5400, 3, 30000);
+  }
+
+  // Seed digital_pricing_giacong
+  const giaCongCount = db.prepare('SELECT COUNT(*) as cnt FROM digital_pricing_giacong').get() as { cnt: number };
+  if (giaCongCount.cnt === 0) {
+    const jsonPath = path.join(process.cwd(), 'data', 'digital_pricing_giacong.json');
+    if (fs.existsSync(jsonPath)) {
+      try {
+        const rows = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+        const insertGC = db.prepare(`
+          INSERT INTO digital_pricing_giacong (machine_name, sheet_size, width_mm, height_mm, paper_lt_249, paper_250_349, paper_350_450, decal_paper_plastic, decal_clear, synthetic_paper, pvc_plastic)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        for (const r of rows) {
+          insertGC.run(
+            r.machine_name, r.sheet_size, r.width_mm, r.height_mm,
+            r.paper_lt_249, r.paper_250_349, r.paper_350_450,
+            r.decal_paper_plastic, r.decal_clear, r.synthetic_paper, r.pvc_plastic
+          );
+        }
+      } catch (err) {
+        console.error('Error seeding digital_pricing_giacong:', err);
+      }
+    }
+  }
+
+  // Seed digital_pricing_kem_giay
+  const kemGiayCount = db.prepare('SELECT COUNT(*) as cnt FROM digital_pricing_kem_giay').get() as { cnt: number };
+  if (kemGiayCount.cnt === 0) {
+    const jsonPath = path.join(process.cwd(), 'data', 'digital_pricing_kem_giay.json');
+    if (fs.existsSync(jsonPath)) {
+      try {
+        const rows = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+        const insertKG = db.prepare(`
+          INSERT INTO digital_pricing_kem_giay (paper_code, paper_name, gsm, sheet_size, width_mm, height_mm, price_1side, price_2side)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        for (const r of rows) {
+          insertKG.run(
+            r.paper_code, r.paper_name, r.gsm, r.sheet_size,
+            r.width_mm, r.height_mm, r.price_1side, r.price_2side
+          );
+        }
+      } catch (err) {
+        console.error('Error seeding digital_pricing_kem_giay:', err);
+      }
+    }
   }
 
   const finishingCount = db.prepare('SELECT COUNT(*) as cnt FROM finishing_services').get() as { cnt: number };

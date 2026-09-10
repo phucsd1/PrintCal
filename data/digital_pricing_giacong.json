@@ -1,0 +1,67 @@
+[
+  {
+    "machine_name": "KONICA C12000 / C12010S 5 MÀU",
+    "sheet_size": "A4",
+    "width_mm": 210,
+    "height_mm": 297,
+    "paper_lt_249": 600,
+    "paper_250_349": 800,
+    "paper_350_450": 1000,
+    "decal_paper_plastic": 1200,
+    "decal_clear": 1500,
+    "synthetic_paper": 1000,
+    "pvc_plastic": 1500
+  },
+  {
+    "machine_name": "KONICA C12000 / C12010S 5 MÀU",
+    "sheet_size": "330x355",
+    "width_mm": 330,
+    "height_mm": 355,
+    "paper_lt_249": 800,
+    "paper_250_349": 1000,
+    "paper_350_450": 1800,
+    "decal_paper_plastic": 1500,
+    "decal_clear": 1700,
+    "synthetic_paper": 1800,
+    "pvc_plastic": 2000
+  },
+  {
+    "machine_name": "KONICA C12000 / C12010S 5 MÀU",
+    "sheet_size": "A3",
+    "width_mm": 297,
+    "height_mm": 420,
+    "paper_lt_249": 1200,
+    "paper_250_349": 1600,
+    "paper_350_450": 2100,
+    "decal_paper_plastic": 2100,
+    "decal_clear": 2300,
+    "synthetic_paper": 2100,
+    "pvc_plastic": 2500
+  },
+  {
+    "machine_name": "KONICA C12000 / C12010S 5 MÀU",
+    "sheet_size": "330x483",
+    "width_mm": 330,
+    "height_mm": 483,
+    "paper_lt_249": 2000,
+    "paper_250_349": 2500,
+    "paper_350_450": 2700,
+    "decal_paper_plastic": 2500,
+    "decal_clear": 2800,
+    "synthetic_paper": 2700,
+    "pvc_plastic": 3000
+  },
+  {
+    "machine_name": "KONICA C12000 / C12010S 5 MÀU",
+    "sheet_size": "330x1200",
+    "width_mm": 330,
+    "height_mm": 1200,
+    "paper_lt_249": 4000,
+    "paper_250_349": 7000,
+    "paper_350_450": 10000,
+    "decal_paper_plastic": 6000,
+    "decal_clear": 7500,
+    "synthetic_paper": 15000,
+    "pvc_plastic": 0
+  }
+]

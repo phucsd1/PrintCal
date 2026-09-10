@@ -1,4 +1,4 @@
-import {
+new_content = """import {
   CalculationInput,
   CalculationResult,
   ComparisonItem,
@@ -683,3 +683,8 @@ function runQuickEstimate(
 
   return { finalPrice, unitPrice };
 }
+"""
+
+with open("src/lib/engine/costCalculator.ts", "w", encoding="utf-8") as f:
+    f.write(new_content)
+print("Updated costCalculator.ts successfully!")

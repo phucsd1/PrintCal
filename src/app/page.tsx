@@ -17,6 +17,7 @@ import {
   CalculationInput,
   CalculationResult,
   DigitalMachine,
+  DigitalMode,
   FinishingService,
   OffsetMachine,
   PaperType,
@@ -55,6 +56,9 @@ export default function HomePage() {
   const [jobName, setJobName] = useState('In Tờ Rơi A4');
   const [productType, setProductType] = useState<ProductType>('to_roi');
   const [printTech, setPrintTech] = useState<PrintTech>('auto');
+  const [digitalMode, setDigitalMode] = useState<DigitalMode>('with_paper');
+  const [customerSuppliedPaper, setCustomerSuppliedPaper] = useState(false);
+  const [whiteInk, setWhiteInk] = useState(false);
   const [quantity, setQuantity] = useState(1000);
   const [widthMm, setWidthMm] = useState(210);
   const [heightMm, setHeightMm] = useState(297);
@@ -143,6 +147,9 @@ export default function HomePage() {
         colorsFront: Number(colorsFront) || 4,
         colorsBack: printSides === '2_side' ? (Number(colorsBack) || 4) : 0,
         offsetWorkType,
+        digitalMode,
+        customerSuppliedPaper,
+        whiteInk,
         selectedFinishing,
         profitMarginPercent: Number(profitMarginPercent) || 0,
         discountAmount: Number(discountAmount) || 0,
@@ -168,6 +175,9 @@ export default function HomePage() {
     jobName,
     productType,
     printTech,
+    digitalMode,
+    customerSuppliedPaper,
+    whiteInk,
     quantity,
     widthMm,
     heightMm,
@@ -591,6 +601,74 @@ export default function HomePage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Tùy chọn in nhanh KTS (Kèm giấy INTC vs Gia công Konica C12000) */}
+                    {(printTech === 'digital' || printTech === 'auto') && (
+                      <div className="mt-3 p-3 bg-sky-50/70 border border-sky-200/80 rounded-xl space-y-2.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                          <span className="text-xs font-bold text-sky-950 flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-sky-600" />
+                            Chế độ in nhanh KTS:
+                          </span>
+                          <div className="flex gap-1 bg-white p-0.5 rounded-lg border border-sky-200 text-xs">
+                            <button
+                              type="button"
+                              onClick={() => setDigitalMode('with_paper')}
+                              className={`px-2.5 py-1 rounded font-semibold text-[11px] transition-colors ${
+                                digitalMode === 'with_paper'
+                                  ? 'bg-sky-600 text-white shadow-2xs'
+                                  : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              📦 Kèm giấy (INTC)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDigitalMode('without_paper')}
+                              className={`px-2.5 py-1 rounded font-semibold text-[11px] transition-colors ${
+                                digitalMode === 'without_paper'
+                                  ? 'bg-sky-600 text-white shadow-2xs'
+                                  : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              ⚙️ In gia công (Konica C12000)
+                            </button>
+                          </div>
+                        </div>
+
+                        {digitalMode === 'with_paper' ? (
+                          <div className="text-[11px] text-sky-800 bg-white/70 p-2 rounded-lg border border-sky-100">
+                            <strong>Bảng giá INTC (14.03.2026):</strong> Trọn gói công in + giấy theo mã giấy. Khổ in 325&times;430 & 325&times;355mm. Phụ phí SL ít: &lt;50 tờ (+30k), &lt;100 tờ (+20k), &ge;100 tờ miễn phí.
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-sky-800 bg-white/70 p-2 rounded-lg border border-sky-100 space-y-2">
+                            <div>
+                              <strong>Bảng giá Konica C12000 (Trang 2 PDF 26.02.2026):</strong> 5 khổ in (A4, 330&times;355, A3, 330&times;483, 330&times;1200) cho 7 nhóm chất liệu. In 2 mặt &times;2. Phụ phí SL ít: &lt;50 tờ (+30k), &lt;100 tờ (+20k).
+                            </div>
+                            <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-800 pt-1 border-t border-sky-100">
+                              <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={customerSuppliedPaper}
+                                  onChange={(e) => setCustomerSuppliedPaper(e.target.checked)}
+                                  className="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
+                                />
+                                <span>Khách tự cấp giấy (Tiền giấy = 0đ)</span>
+                              </label>
+                              <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={whiteInk}
+                                  onChange={(e) => setWhiteInk(e.target.checked)}
+                                  className="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
+                                />
+                                <span>In mực trắng (5 màu)</span>
+                              </label>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

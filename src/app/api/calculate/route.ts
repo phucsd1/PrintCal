@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { calculatePrintCost } from '@/lib/engine/costCalculator';
-import { CalculationInput, DigitalMachine, FinishingService, OffsetMachine, PaperType } from '@/types';
+import {
+  CalculationInput,
+  DigitalMachine,
+  DigitalPrintGiaCong,
+  DigitalPrintKemGiay,
+  FinishingService,
+  OffsetMachine,
+  PaperType,
+} from '@/types';
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +21,8 @@ export async function POST(req: NextRequest) {
     if (input.paperTypeId) {
       paperRow = db.prepare('SELECT * FROM paper_types WHERE id = ?').get(input.paperTypeId) as Record<string, unknown> | undefined;
     } else if ((input as unknown as Record<string, unknown>).paperCode) {
-      paperRow = db.prepare('SELECT * FROM paper_types WHERE code = ?').get((input as unknown as Record<string, unknown>).paperCode as string) as Record<string, unknown> | undefined;
+      const codeStr = (input as unknown as Record<string, unknown>).paperCode as string;
+      paperRow = db.prepare('SELECT * FROM paper_types WHERE code = ? OR code LIKE ? LIMIT 1').get(codeStr, `${codeStr}%`) as Record<string, unknown> | undefined;
     } else {
       paperRow = db.prepare('SELECT * FROM paper_types WHERE is_active = 1 LIMIT 1').get() as Record<string, unknown> | undefined;
     }
@@ -62,6 +71,37 @@ export async function POST(req: NextRequest) {
       const row = db.prepare('SELECT * FROM digital_machines ORDER BY id ASC LIMIT 1').get() as Record<string, unknown> | undefined;
       if (row) digitalMachine = mapDigitalMachine(row);
     }
+
+    // Lấy bảng giá in nhanh gia công (Konica C12000)
+    const digitalGiaCongRows = db.prepare('SELECT * FROM digital_pricing_giacong ORDER BY id ASC').all() as Record<string, unknown>[];
+    const digitalPricingGiaCong: DigitalPrintGiaCong[] = digitalGiaCongRows.map((r) => ({
+      id: r.id as number,
+      machineName: r.machine_name as string,
+      sheetSize: r.sheet_size as string,
+      widthMm: r.width_mm as number,
+      heightMm: r.height_mm as number,
+      paperLt249: r.paper_lt_249 as number,
+      paper250To349: r.paper_250_349 as number,
+      paper350To450: r.paper_350_450 as number,
+      decalPaperPlastic: r.decal_paper_plastic as number,
+      decalClear: r.decal_clear as number,
+      syntheticPaper: r.synthetic_paper as number,
+      pvcPlastic: r.pvc_plastic as number,
+    }));
+
+    // Lấy bảng giá in nhanh kèm giấy (INTC)
+    const digitalKemGiayRows = db.prepare('SELECT * FROM digital_pricing_kem_giay ORDER BY id ASC').all() as Record<string, unknown>[];
+    const digitalPricingKemGiay: DigitalPrintKemGiay[] = digitalKemGiayRows.map((r) => ({
+      id: r.id as number,
+      paperCode: r.paper_code as string,
+      paperName: r.paper_name as string,
+      gsm: r.gsm as number,
+      sheetSize: r.sheet_size as string,
+      widthMm: r.width_mm as number,
+      heightMm: r.height_mm as number,
+      price1Side: r.price_1side as number,
+      price2Side: r.price_2side as number,
+    }));
 
     // Lấy danh mục dịch vụ gia công
     const finishingRows = db.prepare('SELECT * FROM finishing_services WHERE is_active = 1').all() as Record<string, unknown>[];
@@ -115,6 +155,9 @@ export async function POST(req: NextRequest) {
       offsetWorkType: (rawBody.offsetWorkType as CalculationInput['offsetWorkType']) || 'self_turn',
       offsetMachineId: rawBody.offsetMachineId ? Number(rawBody.offsetMachineId) : undefined,
       digitalMachineId: rawBody.digitalMachineId ? Number(rawBody.digitalMachineId) : undefined,
+      digitalMode: (rawBody.digitalMode as CalculationInput['digitalMode']) || 'with_paper',
+      customerSuppliedPaper: Boolean(rawBody.customerSuppliedPaper),
+      whiteInk: Boolean(rawBody.whiteInk),
       selectedFinishing: sanitizedFinishing,
       profitMarginPercent: Number(rawBody.profitMarginPercent) || 0,
       discountAmount: Number(rawBody.discountAmount) || 0,
@@ -128,6 +171,8 @@ export async function POST(req: NextRequest) {
       allOffsetMachines,
       digitalMachine,
       allFinishingServices,
+      digitalPricingGiaCong,
+      digitalPricingKemGiay,
     });
 
     return NextResponse.json(result);
