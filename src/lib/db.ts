@@ -145,7 +145,10 @@ function initSchema(db: DatabaseSync) {
 
 function seedDefaultData(db: DatabaseSync) {
   const paperCount = db.prepare('SELECT COUNT(*) as cnt FROM paper_types').get() as { cnt: number };
-  if (paperCount.cnt === 0) {
+  if (paperCount.cnt < 100) {
+    if (paperCount.cnt > 0) {
+      db.exec('DELETE FROM paper_types;');
+    }
     const insertPaper = db.prepare(`
       INSERT INTO paper_types (code, name, gsm, parent_width_cm, parent_height_cm, price_per_ram, price_per_kg, unit, description)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
